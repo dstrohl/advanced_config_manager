@@ -2,13 +2,14 @@ __author__ = 'dstrohl'
 
 import unittest
 import copy
-from CompIntel.Core.Config.advconfigparser import ConfigOption, ConfigSection, ConfigManager, ip
-from CompIntel.Core.Config.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
-from CompIntel.Core.Config.config_storage import ConfigSimpleDictStorage
+from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager, ip
+from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
+from AdvConfigMgr.config_storage import ConfigSimpleDictStorage
 
-from CompIntel.Core.Config.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
+from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
     DataTypeList, DataTypeStr, _UNSET
-from CompIntel.Core.Validation.validations import ValidateNumRange, ValidationError
+
+from AdvConfigMgr.config_validation import ValidateNumRange, ValidationError
 
 
 class TestClass(object):

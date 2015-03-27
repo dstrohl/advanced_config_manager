@@ -1,11 +1,18 @@
 __author__ = 'dstrohl'
 
-from CompIntel.Core.Config.config_exceptions import *
-from PythonUtils import make_list
+from AdvConfigMgr.config_exceptions import *
+from AdvConfigMgr.utils import make_list
 from argparse import ArgumentParser
 import copy
+import re
+import sys
+import os.path
+import shutil
+from pathlib import Path
+from datetime import datetime
 
-__all__ = ['BaseConfigStorageManager','StorageManagerManager','ConfigCLIStorage','ConfigSimpleDictStorage']
+__all__ = ['BaseConfigStorageManager', 'StorageManagerManager', 'ConfigCLIStorage', 'ConfigSimpleDictStorage',
+           'ConfigFileStorage']
 
 
 class BaseConfigStorageManager(object):
@@ -20,12 +27,6 @@ class BaseConfigStorageManager(object):
     force = False               #: True if this will set options even if they are locked
     overwrite = False           #: True if this will overwrite options that have existing values
     lock_after_read = False     #: True if this will lock the option after reading
-    last_section_count = 0
-    last_option_count = 0
-
-    manager = None
-
-    data = None
 
 
     def __init__(self,
@@ -54,6 +55,15 @@ class BaseConfigStorageManager(object):
         self.overwrite = overwrite or self.overwrite
         self.lock_after_read = lock_after_read or self.lock_after_read
         self.priority = priority
+
+        self._flat_dict = None
+
+        self.last_section_count = 0
+        self.last_option_count = 0
+
+        self.manager = None
+
+        self.data = None
 
         ip.info('Loading storage manager: ', self.storage_tag)
 
@@ -136,9 +146,9 @@ class BaseConfigStorageManager(object):
         tmp_ret = {}
 
         if isinstance(section_name, str) or self.manager._no_sections:
-            flat_dict = True
+            self._flat_dict = True
         else:
-            flat_dict = False
+            self._flat_dict = False
 
         section_name = make_list(section_name)
 
@@ -169,7 +179,7 @@ class BaseConfigStorageManager(object):
                         self.last_option_count += 1
                         tmp_sec[option.name] = opt_value
 
-                if flat_dict:
+                if self._flat_dict:
                     tmp_ret = tmp_sec
                 else:
                     tmp_ret[section.name] = tmp_sec
@@ -279,6 +289,7 @@ class BaseConfigStorageManager(object):
     def __repr__(self):
         return self.storage_type_name+' ['+self.storage_tag+']'
 
+
 class ConfigCLIStorage(BaseConfigStorageManager):
     """
     Read configuration from the CLI
@@ -292,13 +303,14 @@ class ConfigCLIStorage(BaseConfigStorageManager):
     lock_after_read = True     #: True if this will lock the option after reading
     priority = 1
 
-    _reset_config_cache = True
+    def __init__(self, *args, **kwargs):
+        self._reset_config_cache = True
+        self._cli_parser = None
+        super(ConfigCLIStorage, self).__init__(*args, **kwargs)
 
-    _cli_parser = None
 
-    data = None
 
-    def read(self, section_name=None, storage_tag=storage_tag):
+    def read(self, section_name=None, storage_tag=storage_tag, **kwargs):
         """
         will take a dictionary and save it to the system
         :param dict_in:
@@ -312,7 +324,7 @@ class ConfigCLIStorage(BaseConfigStorageManager):
         return self.last_section_count, self.last_option_count
 
 
-    def write(self, section_name=None, storage_tag=storage_tag):
+    def write(self, section_name=None, storage_tag=storage_tag, **kwargs):
         """
         cli does not accept writing options -- disabled
         """
@@ -374,7 +386,11 @@ class ConfigSimpleDictStorage(BaseConfigStorageManager):
     storage_tag = 'dict'
     standard = False             #: True if this should be used for read_all/write_all ops
 
-    def read(self, section_name=None, storage_tag=storage_tag):
+    def __init__(self, *args, **kwargs):
+        super(ConfigSimpleDictStorage, self).__init__(*args, **kwargs)
+
+
+    def read(self, section_name=None, storage_tag=storage_tag, **kwargs):
         """
         will take a dictionary and save it to the system
         :param dict_in:
@@ -384,7 +400,7 @@ class ConfigSimpleDictStorage(BaseConfigStorageManager):
         self._save_dict(self.data, section_name, storage_tag)
         return self.last_section_count, self.last_option_count
 
-    def write(self, section_name=None, storage_tag=storage_tag):
+    def write(self, section_name=None, storage_tag=storage_tag, **kwargs):
         """
         will return a dictionary from the system
         :param storage_tag:
@@ -398,28 +414,31 @@ class StorageManagerManager(object):
     """
     A class to handle storage managers
     """
-    default_cli_manager = ConfigCLIStorage()
 
-    def __init__(self, config_manager, *managers, cli_parser_name='cli', cli_manager=default_cli_manager):
+    def __init__(self, config_manager, *managers, cli_parser_name='cli', cli_manager=None):
         """
         :param config_manager: a link to the ConfigurationManager object
         :param managers: the managers to be registered.  The first manager passed will be imported as the default
-        :param skip_cli: if True will not load the default cli manager
-        :param cli_manager: allows replacement of the default cli manager
+        :param cli_parser_name: the name of the cli parser if not 'cli', if None, this will disable CLI parsing.
+        :param cli_manager: None uses the standard CLI Parser, this allows replacement of the default cli manager
         """
         self.config_manager = config_manager
         self.tag_dict = {}
         self.manager_list = []
         self.default_manager = None
         set_as_default = True
+
         if managers:
             for a in managers:
                 self.register_storage(a, default=set_as_default)
                 set_as_default = False
 
-        if cli_parser_name is not None and 'cli' not in self:
-            cli_manager.storage_tag = cli_parser_name
-            self.register_storage(cli_manager)
+        if cli_parser_name is not None:
+            if cli_parser_name not in self:
+                if cli_manager is None:
+                    cli_manager = ConfigCLIStorage()
+                cli_manager.storage_tag = cli_parser_name
+                self.register_storage(cli_manager)
 
     def register_storage(self, storage_manager, default=True):
         ip.debug('registering storage manager')
@@ -587,10 +606,15 @@ class StorageManagerManager(object):
             yield s
 
 
-
-'''
 class ConfigFileStorage(BaseConfigStorageManager):
+    """
+    A file manager that stores config files in a text file
+    """
 
+
+    storage_type_name = 'INI File'
+    storage_tag = 'txt'          #: the internal name of the storage manager, must be unique
+    force_strings = True       #: True if the storage only accepts strings
 
     # Regular expressions for parsing section headers and options
     _SECT_TMPL = r"""
@@ -617,45 +641,120 @@ class ConfigFileStorage(BaseConfigStorageManager):
         """
     # Compiled regular expression for matching sections
     SECTCRE = re.compile(_SECT_TMPL, re.VERBOSE)
+
     # Compiled regular expression for matching options with typical separators
     OPTCRE = re.compile(_OPT_TMPL.format(delim="=|:"), re.VERBOSE)
+
     # Compiled regular expression for matching options with optional values
     # delimited using typical separators
     OPTCRE_NV = re.compile(_OPT_NV_TMPL.format(delim="=|:"), re.VERBOSE)
+
     # Compiled regular expression for matching leading whitespace in a line
     NONSPACECRE = re.compile(r"\S")
+
     # Possible boolean values in the configuration.
     BOOLEAN_STATES = {'1': True, 'yes': True, 'true': True, 'on': True,
                       '0': False, 'no': False, 'false': False, 'off': False}
 
-
-
-    def __init__(self,
+    def __init__(self, *,
                  delimiters=('=', ':'),
                  comment_prefixes=('#', ';'),
-                 inline_comment_prefixes=None ):
+                 inline_comment_prefixes=None,
+                 space_around_delimiters=True,
+                 strict=True,
+                 read_filenames=None,
+                 read_paths=None,
+                 read_path_blob='*.ini',
+                 write_filename=None,
+                 # leave_open=False,
+                 create_files=True,
+                 fail_if_no_file=False,
+                 make_backup_before_writing=False,
+                 backup_filename='&_@.bak',
+                 backup_path=None,
+                 max_backup_number=999,
+                 encoding=None,
+                 **kwargs):
+        """
+        :param delimiters: the delimiter between the key and the value
+        :param comment_prefixes:  this is a tuple of characters that if they occur as the first non-whitespace
+            character of a line, the line is a comment
+        :param inline_comment_prefixes: this is a tuple of characters that if they occur elsewhere in the line after a
+            whitespace char, the rest of the line is a comment.
+        :param space_around_delimiters: True if space should be added around the delimeters.
+        :param strict: if False, duplicate sections will be merged, if True, duplicate sections will raise an error
+        :param read_filenames: a filename or list of file names, assumed to be in the current directory if not otherwise
+            specified for reading.
+            The filename to read from can also be passed during the read operation.
+        :param read_paths: a path or list of paths to read files from, this allows reading all files in the path.
+        :param read_path_blob: the blob filter to use for reading files from a path.  the default is '\*.ini'.
+        :param write_filename: the filename to write files to.
+            if None and read_filenames is passed, this will take the first name in the list.
+            if None and read_paths is passed, AND if there is ONLY ONE file in the path that matches the filter,
+            this will use that file.
+            the filename to write to can also be passed during the write operation.
+        :param leave_open: if True, the file objects will be left open while the config manager is loaded.  this can
+            speed up file access, but it also uses up file handles, buffers, memory, and has the possibility of
+            corrupted files.
+        :param create_files: if False, will not create any files it does not find.
+        :param fail_if_no_file: if False, will fail and raise an error if the specified filename is not found.
+        :param make_backup_before_writing: if True, the system will make a backup file before writing the configuration.
+        :param backup_filename: the filename of the backup file.  this can have the following formatting keys:
+            '{NUM}' for an incremental number (uses the next available number)
+            '{DATE}' for a date string ('YYYYMMDD')
+            '{STIME}' for a 1 second resolution time string ('HHMMSS')
+            '{MTIME}' for a 1 minute resolution time string {'HHMM')
+            '{NAME}' for the old config file name (without extension)
+        :param backup_path: if not None (the default) this allows the backup file to be in a different location.
+        :param max_backup_number: the max number (assuming a backup file and NUM in the filename)
+        :param encoding:
+        :param kwargs: any required kwargs from the base storage manager
+        :return:
+        """
         self._delimiters = tuple(delimiters)
         if delimiters == ('=', ':'):
-            self._optcre = self.OPTCRE_NV if allow_no_value else self.OPTCRE
+            self._optcre = self.OPTCRE_NV
         else:
             d = "|".join(re.escape(d) for d in delimiters)
-            if allow_no_value:
-                self._optcre = re.compile(self._OPT_NV_TMPL.format(delim=d),
-                                          re.VERBOSE)
-            else:
-                self._optcre = re.compile(self._OPT_TMPL.format(delim=d),
-                                          re.VERBOSE)
+            self._optcre = re.compile(self._OPT_NV_TMPL.format(delim=d), re.VERBOSE)
+
         self._comment_prefixes = tuple(comment_prefixes or ())
         self._inline_comment_prefixes = tuple(inline_comment_prefixes or ())
+        self._space_around_delimiters = space_around_delimiters
+        self._strict = strict
+        self._encoding = encoding
 
+        # self._leave_open = leave_open
+        self._create_files = create_files
+        self._fail_if_no_file = fail_if_no_file
 
+        # self._files = None
+        self._read_filenames = make_list(read_filenames)
+        self._read_paths = make_list(read_paths)
+        self._read_path_blob = read_path_blob
+        self._write_filename = write_filename
 
+        self._make_backup_before_writing = make_backup_before_writing
+        self._backup_path = backup_path
+        self._backup_filename = backup_filename
+        self._max_backup_num = max_backup_number
 
-class ConfigStringStorage(BaseConfigStorageManager):
-    pass
-'''
+        # self.filenames(filenames)
 
-'''
+        super(ConfigFileStorage, self).__init__(**kwargs)
+
+    '''
+    def filenames(self, filenames):
+        """
+        Sets the list of filenames to read/write to
+        :param filenames:
+        :return:
+        """
+
+        self._files = make_list(filenames)
+    '''
+
+    #: TODO Fix This
     def read(self, filenames, encoding=None):
         """Read and parse a filename or a list of filenames.
 
@@ -674,14 +773,17 @@ class ConfigStringStorage(BaseConfigStorageManager):
         for filename in filenames:
             try:
                 with open(filename, encoding=encoding) as fp:
-                    self._read(fp, filename)
+                    self._read_stream(fp, filename)
             except OSError:
                 continue
             read_ok.append(filename)
         return read_ok
 
+    '''
+    #: TODO Fix This
     def read_file(self, f, source=None):
-        """Like read() but the argument must be a file-like object.
+        """
+        Like read() but the argument must be a file-like object.
 
         The `f' argument must be iterable, returning one line at a time.
         Optional second argument is the `source' specifying the name of the
@@ -693,56 +795,165 @@ class ConfigStringStorage(BaseConfigStorageManager):
                 source = f.name
             except AttributeError:
                 source = '<???>'
-        self._read(f, source)
+        self._read_stream(f, source)
+    '''
 
+    #: TODO Fix This
     def read_string(self, string, source='<string>'):
         """Read configuration from a given string."""
         sfile = io.StringIO(string)
         self.read_file(sfile, source)
 
-
-    def readfp(self, fp, filename=None):
-        """Deprecated, use read_file instead."""
-        warnings.warn(
-            "This method will be removed in future versions.  "
-            "Use 'parser.read_file()' instead.",
-            DeprecationWarning, stacklevel=2
-        )
-        self.read_file(fp, source=filename)
-
-
-    def write(self, fp, space_around_delimiters=True):
-        """Write an .ini-format representation of the configuration state.
-
-        If `space_around_delimiters' is True (the default), delimiters
-        between keys and values are surrounded by spaces.
+    def _parse_list(self, list_in, filename):
         """
-        if space_around_delimiters:
-            d = " {} ".format(self._delimiters[0])
-        else:
-            d = self._delimiters[0]
-        if self._defaults:
-            self._write_section(fp, self.default_section,
-                                self._defaults.items(), d)
-        for section in self._sections:
-            self._write_section(fp, section,
-                                self._sections[section].items(), d)
+        Parse a sectioned list from a config file.
 
-    def _write_section(self, fp, section_name, section_items, delimiter):
-        """Write a single section to the specified `fp'."""
-        fp.write("[{}]\n".format(section_name))
-        for key, value in section_items:
-            value = self._interpolation.before_write(self, section_name, key,
-                                                     value)
-            if value is not None or not self._allow_no_value:
-                value = delimiter + str(value).replace('\n', '\n\t')
+        Each section in a configuration file contains a header, indicated by
+        a name in square brackets (`[]'), plus key/value options, indicated by
+        `name' and `value' delimited with a specific substring (`=' or `:' by
+        default).
+
+        Values can span multiple lines, as long as they are indented deeper
+        than the first line of the value. Depending on the parser's mode, blank
+        lines may be treated as parts of multiline values or ignored.
+
+        Configuration files may include comments, prefixed by specific
+        characters (`#' and `;' by default). Comments may appear on their own
+        in an otherwise empty line or may be entered in lines holding values or
+        section names.
+        """
+        out_dict = {}
+        elements_added = set()
+        cursect = None  # None, or a dictionary
+        sectname = None
+        optname = None
+        lineno = 0
+        indent_level = 0
+        e = None  # None, or an exception
+
+        for lineno, line in enumerate(list_in, start=1):
+
+            comment_start = sys.maxsize
+            # strip comments
+
+            for prefix in self._comment_prefixes:
+                if line.strip().startswith(prefix):
+                    comment_start = 0
+                    break
+
+            if comment_start == sys.maxsize:
+                inline_pos = [comment_start]
+                for prefix in self._inline_comment_prefixes:
+                    index = line.find(prefix)
+                    if index == -1:
+                        continue
+                    if index == 0 or (index > 0 and line[index-1].isspace()):
+                        inline_pos.append(index)
+                comment_start = min(inline_pos)
+
+            if comment_start == sys.maxsize:
+                value = line
+            elif comment_start == 0:
+                value = None
             else:
-                value = ""
-            fp.write("{}{}\n".format(key, value))
-        fp.write("\n")
+                value = line[:comment_start].rstrip()
+
+            if not value:
+                # empty line marks end of value
+                indent_level = sys.maxsize
+                continue
+
+                '''
+                if self._empty_lines_in_values:
+                    # add empty line to the value, but only if there was no
+                    # comment on the line
+                    if (comment_start is None and
+                            cursect is not None and
+                            optname and
+                            cursect[optname] is not None):
+
+                        cursect[optname].append('')  # newlines added at join
+                else:
+                    # empty line marks end of value
+                    indent_level = sys.maxsize
+                continue
+                '''
+
+            # continuation line?
+            first_nonspace = self.NONSPACECRE.search(line)
+            cur_indent_level = first_nonspace.start() if first_nonspace else 0
+
+            if (cursect is not None and optname and
+                    cur_indent_level > indent_level):
+
+                cursect[optname].append(value)
+
+            # a section header or option header?
+            else:
+                indent_level = cur_indent_level
+                # is it a section header?
+
+                mo = self.SECTCRE.match(value)
+
+                if mo:
+                    sectname = mo.group('header')
+
+                    if sectname in out_dict:
+                        if self._strict:
+                            raise DuplicateSectionError(sectname, filename, lineno)
+                        cursect = out_dict[sectname]
+
+                    else:
+                        cursect = {}
+                        out_dict[sectname] = cursect
+                        elements_added.add(sectname)
+                    # So sections can't start with a continuation line
+                    optname = None
+
+                # no section header in the file?
+                elif cursect is None:
+                    raise MissingSectionHeaderError(filename, lineno, line)
+
+                # an option line?
+                else:
+
+                    mo = self._optcre.match(value)
+
+                    if mo:
+                        optname, vi, optval = mo.group('option', 'vi', 'value')
+
+                        if not optname:
+                            e = self._handle_error(e, filename, lineno, line)
+
+                        optname = optname.strip()
+                        if self._strict and optname in cursect:
+                            raise DuplicateOptionError(sectname, optname,
+                                                       filename, lineno)
+
+                        # This check is fine because the OPTCRE cannot
+                        # match if it would set optval to None
+                        if optval is not None:
+                            optval = optval.strip()
+                            cursect[optname] = [optval]
+
+                        else:
+                            # valueless option handling
+                            cursect[optname] = None
+                    else:
+                        # a non-fatal parsing error occurred. set up the
+                        # exception but keep going. the exception will be
+                        # raised at the end of the file and will contain a
+                        # list of all bogus lines
+                        e = self._handle_error(e, filename, lineno, line)
+        # if any parsing errors occurred, raise an exception
+        if e:
+            raise e
 
 
-    def _read(self, fp, fpname):
+    '''
+
+    #: TODO Fix This
+    def _read_stream(self, fp, fpname):
         """Parse a sectioned configuration file.
 
         Each section in a configuration file contains a header, indicated by
@@ -863,7 +1074,108 @@ class ConfigStringStorage(BaseConfigStorageManager):
         if e:
             raise e
         self._join_multiline_values()
+    '''
 
+    # ****************************************************************************************************
+    # *** Write files section
+    # ****************************************************************************************************
+
+    def _format_dict(self, sections, storage_tag):
+        tmp_dict_to_save = self._get_dict(sections, storage_tag)
+
+        tmp_list = []
+        if self._flat_dict:
+            tmp_list.extend(self._format_section(tmp_dict_to_save, 'DEFAULT'))
+        else:
+            for k, s in tmp_dict_to_save.items():
+                tmp_list.extend(self._format_section(s, k))
+
+        return tmp_list
+
+    def _format_section(self, option_dict, section_name):
+
+        tmp_ret = []
+
+        if self.space_around_delimiters:
+            delimiter = " {} ".format(self._delimiters[0])
+        else:
+            delimiter = self._delimiters[0]
+
+        tmp_ret.append("[{}]\n".format(section_name))
+        for key, value in option_dict:
+            if value is not None:
+                value = delimiter + str(value).replace('\n', '\n\t')
+            else:
+                value = ""
+            tmp_ret.append("{}{}\n".format(key, value))
+        tmp_ret.append("\n")
+
+    def _make_backup(self, filename):
+        """
+        creates a formatted backup filename.
+        """
+        dt_date = datetime.now.strftime('%Y%m%d')
+        dt_stime = datetime.now.strftime('%H%M%S')
+        dt_mtime = datetime.now.strftime('%H%M')
+
+        name = Path(filename).name
+        format_dict = dict(name=name, date=dt_date, stime=dt_stime, mtime=dt_mtime, num='*')
+
+        backup_filename = copy.copy(self._backup_filename)
+        backup_filename = backup_filename.format(format_dict)
+
+
+        # if the path needs a number, test for it.
+        if '*' in backup_filename:
+            num_key = '{:0'+len(str(self._max_backup_num))+'}'
+            backup_filename = backup_filename.replace('*', num_key)
+
+            for n in range(self._max_backup_num):
+                tmp_filename = backup_filename.format(num=n)
+                test_path = Path(self._backup_path, tmp_filename)
+                if not test_path.exists():
+                    dest_fn = str(test_path)
+                    break
+        else:
+            dest_fn = backup_filename
+
+        shutil.copy(filename, dest_fn)
+
+    def write(self, section_name=None, storage_tag=storage_tag, file=None, encoding=None, **kwargs):
+        """
+        will write to an INI file.
+        """
+        exists = True
+        if file is None:
+            if self._write_filename is None:
+                raise AttributeError('either a file object or a filename must be specified')
+            else:
+                filename = Path(self._write_filename)
+
+        elif isinstance(file, str):
+            filename = Path(file)
+            exists = filename.exists()
+
+            if not exists and not self._create_files:
+                raise FileNotFoundError()
+
+        if exists and self._make_backup_before_writing:
+            self._make_backup(filename.name)
+
+        if file is None:
+            file = filename.open(mode='w', encoding=encoding)
+
+        self.data = self._format_dict(section_name, storage_tag)
+
+        for l in self.data:
+            file.write(l)
+
+        file.close()
+
+        return self.last_section_count, self.last_option_count
+
+
+    '''
     def _join_multiline_values(self):
         defaults = self.default_section, self._defaults
         all_sections = itertools.chain((defaults,),
@@ -875,13 +1187,18 @@ class ConfigStringStorage(BaseConfigStorageManager):
                 options[name] = self._interpolation.before_read(self,
                                                                 section,
                                                                 name, val)
+    '''
 
+    def _join_multiline_value(self, val):
+        if isinstance(val, list):
+            val = '\n'.join(val).rstrip()
+        return val
+
+    #: TODO Fix This
     def _handle_error(self, exc, fpname, lineno, line):
         if not exc:
             exc = ParsingError(fpname)
         exc.append(lineno, repr(line))
         return exc
 
-
-'''
 

@@ -5,8 +5,8 @@ __all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataT
 
 import ast
 import copy
-from PythonUtils import make_list, convert_to_boolean
-from CompIntel.Core.Validation.validations import ValidationError
+from AdvConfigMgr.utils import make_list, convert_to_boolean
+from AdvConfigMgr.config_validation import ValidationError
 
 
 class UnSet(object):

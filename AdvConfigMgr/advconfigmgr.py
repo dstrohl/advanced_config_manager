@@ -120,25 +120,15 @@ ConfigParser -- responsible for parsing a list of
         between keys and values are surrounded by spaces.
 """
 
-from CompIntel.Core.Config.config_exceptions import *
-from CompIntel.Core.Config.config_interpolation import Interpolation
-from CompIntel.Core.Config.config_types import *
-from CompIntel.Core.Config.config_storage import *
+from AdvConfigMgr.config_exceptions import *
+from AdvConfigMgr.config_interpolation import Interpolation
+from AdvConfigMgr.config_types import *
+from AdvConfigMgr.config_storage import *
 
 
-from collections.abc import MutableMapping
 from collections import OrderedDict as _default_dict, ChainMap as _ChainMap
-from CompIntel.Core import Validation
-from PythonUtils import Filter, args_handler, convert_to_boolean, IndentedPrinter, is_iterable, make_list, slugify
-import logging
-import functools
-import io
-import itertools
-import re
-import sys
-import warnings
+from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slugify
 import copy
-from argparse import ArgumentParser
 
 __all__ = ["NoSectionError", "DuplicateOptionError", "DuplicateSectionError",
            "NoOptionError", "InterpolationError", "InterpolationDepthError",
@@ -151,76 +141,33 @@ __all__ = ["NoSectionError", "DuplicateOptionError", "DuplicateSectionError",
 class ConfigOption(object):
     def __init__(self, section, name, *args, **kwargs):
         """
-        an individual option in the config
-        :param section:
-            A pointer to the ConfigSection object that this is a part of
-        :param name:
-            The name of the config object.  This is transformed by the optionxform method in the main config parser.
-            by default this is converted to lowercase
-        :param default_value: Default= _UNSET
-            the default value for the item.  if _UNSET this is considered to not have a default.  (this allows None to
-            be a valid default setting.
-        :param data_type: Default=None
-            this is the type of data that is stored in the option.  this accepts : None, 'str', 'int', 'float', 'list', 'dict'
-            additional data types can be defined using the DataTypeBase class.  If set to None and there is a default
-            value set, this will take the datatype of the default value, otherwise it will be set to 'str'
-        :param verbose_name: Default=None
-            This is the long name for the option (that can show up in the options configuration screen or help screen)
-            This is set to a title case version of the option name with spaces replacing '_'
-        :param description: Default=None
-            This is the long description for the option, available in the help screens.
-        :param cli_option: Default=None
-            This allows the option to be changed via the CLI on startup, this would be a string, tuple or dictionary of
-            options that configure how the cli commands will be handled.
+        An individual option in the config
 
-            .. note:: The CLI is handed with :class:`argparse` so all options should be able to be matched to those for
-                detailed questions, not all options are supported though.
-
-            * flags: (required) a flag or list of flags to be accepted. (these must be unique across the system).
-                Note:  The '-' that is required for :class:`argpars` will be automatically added and does not need to
-                be there.
-
-                .. note::  If only a single string is passed, it is assumed to be the flag
-
-            * data_flag: If present, this will set the "store_true" or "store_false" action in argparse, this means that
-                if True is set, and the cli flag is set, the option will be set to True, and vice-versa.  If a default
-                is used, it must be a boolean.
-            * nargs: [int] This will allow that number of arguments to be added to a list config item, so for example,
-                if nargs 3 is passed, the following argument would be treated as one:
-                    -arg 1 3 4
-                and would return ['1','2','3'], however if nargs 2 was passed, this would return ['1','2'] and the '3'
-                would be treated as another positional argument.
-                If a default is used in this case, it must be a list and have this many items.
-            * choices: a list of choices that are available (and will be validated against).  If a default is used, it
-                must be present in the list.
-            * default: if not present, will use the option default, if present and None, will not have a default,
-                if present and set to somethign, will use that as a default.
-                .. note:: if a default is present, either passed or using the option default, it must also fit the other
-                arguments.
-            * required: [True/False] this option MUST be passed on the command line.
-            * help: this is a descriotion string to be used on the command line.  if this is not present,
-                the option description will be used.
-
-                cli_option: ({'flags':['f', 'foo'],
-                              'data_flag':False,
-                              'nargs':2,
-                              'choices':['bar','barr','b'],
-                              'required':False,
-                              'help':'This defines if this is fu or bar'})
-
-        :param validations: Default=None
-            This is a set of validation classes to be run for any options saved.
-        :param keep_if_empty: Default=True
-            if set to False the option will be deleted when the value is cleared AND there is no set default value.
-        :param do_not_change: Default=False
-            If set to True, this will not allow the user to change the option after initial loading.
-        :param do_not_delete: Default=False
-            If set to True, this will not allow the user to delete the option.
-        :param required_after_load: Default = False
-            if set to true, the app should not start without this being set.
+        :param ConfigSection section:  A pointer to the ConfigSection object that this is a part of
+        :param str name: The name of the config object.  This is transformed by the optionxform method in the main config
+            manager.  by default this is converted to lowercase
+        :param object default_value: Default= _UNSET the default value for the item. If set to :py:class:`_UNSET` this is
+            considered to not have a default.  (this allows None to be a valid default setting.
+        :param str data_type: Default=None: This is the type of data that is stored in the option.  this accepts : None,
+            'str', 'int', 'float', 'list', 'dict' additional data types can be defined using the DataTypeBase class.
+            If set to None and there is a default value set, this will take the datatype of the default value,
+            otherwise it will be set to 'str'
+        :param str or None verbose_name: Default=None This is the long name for the option (that can show up in the options
+            configuration screen or help screen)  This is set to a title case version of the option name with spaces
+            replacing '_'
+        :param str or None description: Default=None This is the long description for the option, available in the help screens.
+        :param dict, str or None cli_option: Default=None  This allows the option to be changed via the CLI on startup, this would be a
+            string, tuple or dictionary of options that configure how the cli commands will be handled.
+        :param object validations: Default=None: This is a set of validation classes to be run for any options saved.
+        :param bool keep_if_empty: Default=True: If set to False the option will be deleted when the value is cleared AND
+            there is no set default value.
+        :param bool do_not_change: Default=False If set to True, this will not allow the user to change the option after
+            initial loading.
+        :param bool do_not_delete: Default=False  If set to True, this will not allow the user to delete the option.
+        :param bool required_after_load: Default = False, If set to true, the app should not start without this being set.
             if there is a CLI_option available, the app should prompt the user for that option, if not, the app should
             fail with a usefull message.
-        :param autoconvert: will attempt to autoconvert values to the datatype, this can be disabled if needed.  (some
+        :param bool autoconvert: will attempt to autoconvert values to the datatype, this can be disabled if needed. (some
             types of data may not autoconvert correctly.)
         """
         self._section = section
@@ -558,7 +505,9 @@ class ConfigOption(object):
 
 
 class ConfigSection(object):
-    """ a single section of a config """
+    """
+    A single section of a config
+    """
     def __init__(self, manager, name,
                  verbose_name=None,
                  description=None,
@@ -575,24 +524,23 @@ class ConfigSection(object):
                  section_version='0.0',
                  section_version_upgrade=None):
         """
-        :param section_version: This is the version of data that is stored in this section.
-        :param manager: a pointer to the config manager
-        :param name: the name of the section
-        :param verbose_name: the verbose name of the section
-        :param description: a long description of the section
-        :param storage_write_to: The tag of the storage location to save to, if None, the section will be saved to the
-            default location, if '-' it will not be saved in save_all operations, if "*", section will be saved to all
-            configured storage locations.
-            Sections can be saved manually to any storage if needed.
-        :param storage_read_from_only: options from storage with tags in this list will be read.  If None (default)
+        :param str section_version: This is the version of data that is stored in this section.
+        :param ConfigManager manager: A pointer to the config manager
+        :param str name: The name of the section
+        :param str verbose_name: The verbose name of the section
+        :param str description: A long description of the section
+        :param str storage_write_to: The tag of the storage location to save to, if None, the section will be saved to
+            the default location, if '-' it will not be saved in save_all operations, if "*", section will be saved to
+            all configured storage locations. Sections can be saved manually to any storage if needed.
+        :param str or list storage_read_from_only: options from storage with tags in this list will be read.  If None (default)
             then options in storage will be always be used.  This allows restricting options to specific storage
             locations.
             CLI options, if configured, will always overwrite data from storage.
-        :param store_default: store defaults in storage medium
-        :param locked: if True, do not allow any changes to the section
+        :param bool store_default: store defaults in storage medium
+        :param bool locked: if True, do not allow any changes to the section
         :param dict_type: the dictionary type to be used.
-        :param cli_section_name: the name of the section in the CLI (if sectioned), Defaults to verbose_name
-        :param cli_section_desc: the description for the section in the CLI (if sectioned), Defaults to description
+        :param str cli_section_name: the name of the section in the CLI (if sectioned), Defaults to verbose_name
+        :param str cli_section_desc: the description for the section in the CLI (if sectioned), Defaults to description
         """
 
         self._manager = manager
@@ -627,13 +575,6 @@ class ConfigSection(object):
             self._cli_section_options['title'] = cli_section_title
 
         self._cli_args = {}
-    '''
-    def _filter(self, filter_for, filter_type='eq', filter_field='name'):
-        filter_field = '__'+filter_field+'__'
-        tmp_filterset = (filter_for, filter_type, filter_field)
-        for ret in self.parser._filter_eng(self._options, tmp_filterset):
-            yield ret
-    '''
 
     @property
     def section_ok_after_load(self):
@@ -746,11 +687,12 @@ class ConfigSection(object):
         return self._options[option_name]
 
     def items(self, raw=False, interpolater=None):
-        """Return a list of (name, value) tuples for each option in a section.
+        """
+        Return a list of (name, value) tuples for each option in a section.
 
-        All % interpolations are expanded in the return values, based on the
+        All interpolations are expanded in the return values, based on the
         defaults passed into the constructor, unless the optional argument
-        `raw' is true.
+        'raw' is true.
         """
         tmp_items = list(self.options)
         tmp_ret = []
@@ -761,13 +703,15 @@ class ConfigSection(object):
 
     def delete(self, option, force=False, forgiving=False):
         """
-        will delete a list of options.
+        Will delete a list of options.
 
         :param option: Option name or list of option names.
-        :param force: True will delete the object even if it has a default_value without checking for value or lock.
-        :param forgiving: True will return False if the option is not found, False, will raise NoOptionError.
+        :type: str or list
+        :param bool force: True will delete the object even if it has a default_value without checking for value or lock.
+        :param bool forgiving: True will return False if the option is not found, False, will raise NoOptionError.
         :return: True if all deletes passed, False if not.  if False, a list of the failed options is stored in
-        self.last_failure_list
+            :py:attr:`ConfigSection.last_failure_list`
+        :rtype: bool
         """
         if self.locked and not force:
             ip.debug('section ', self._name, ' locked ')
@@ -806,9 +750,12 @@ class ConfigSection(object):
         Will set the option to the default value or to unset as long as long as the section is not locked.
 
         :param option: option name or list of option names
-        :param forgiving: True will return False if the option is not found, False, will raise NoOptionError.
+        :type option: str or list
+        :param bool forgiving: True will return False if the option is not found, False, will raise NoOptionError.
         :return: True if all deletes passed, False if not.  if False, a list of the failed options is stored in
-        self.last_failure_list
+            self.last_failure_list
+        :rtype: bool
+        :raises NoOptionError: If the option does not exist. and forgiving is False.
         """
         if self.locked:
             ip.debug('section ', self._name, ' locked ')
@@ -892,54 +839,58 @@ class ConfigSection(object):
         """
         Adds new option definition to the system
 
-        :param args, kwargs: config options can also be passed in args/kwargs, in either of the following formats:
-            add('option1', 'option2', 'option3')
-                # this does not set any default values
-            add(full_option_dict, full_option_dict)
-                # seperate dictionaries
-            add([full_option_dict, full_option_dict])
-                # a list of dictionaries
-            add([('option1',default_value),('option2',default_value)]
-                # a list of sets with option_name and default value.
+        args, kwargs: config options can also be passed in args/kwargs, in a number of formats.
 
+        Examples:
+
+        This does not set any default values::
+
+            add('option1', 'option2', 'option3')
+    
+        Seperate dictionaries::
+
+            add(full_option_dict, full_option_dict)
+    
+        A list of dictionaries::
+
+            add([full_option_dict, full_option_dict])
+    
+        A list of sets with option_name and default value.::
+
+            add([('option1',default_value),('option2',default_value)]
+    
+        If default value is a dict, this will not work, if a dict is passed, it is assumed to be a full_option_dict::
 
             add(option1=default_value1, option2=default_value2, option3=default_value3)
-                # if default value is a dict, this will not work, if a dict is passed, it is assumed to be
-                    a full_option_dict
-            add(option1={full_option_dict}, option2={full_option_dict) )
+    
+            add(option1={full_option_dict}, option2={full_option_dict))
+    
+        These can be mixed, so the following would be valid::
 
-            These can be mixed, so the following would be valid:
-
-                add('option1',
-                    full_option_dict,
-                    [full_option_dict, full_option_dict],
-                    [('option2',default_value)]
-                    option3=default_value,
-                    option4=full_option_dict)
-
-
+            add('option1', full_option_dict, [full_option_dict, full_option_dict], [('option2',default_value)])
 
         full_option_dict Example (with defaults):
-                     'name': '<name of option>',
-                     'default_value': _UNSET,
-                     'datatype': None,
-                     'verbose_name': None,
-                     'description': None,
-                     'cli_option': None,
-                     'validations': None,
-                     'do_not_change': False,
-                     'do_not_delete': False,
-                     'required_after_load': False,
+            'name': '<name of option>',
+            'default_value': _UNSET,
+            'datatype': None,
+            'verbose_name': None,
+            'description': None,
+            'cli_option': None,
+            'validations': None,
+            'do_not_change': False,
+            'do_not_delete': False,
+            'required_after_load': False,
 
-            
         .. note::
             * If a default value is a dictionary, it must be passed within a full option dict.
             * See ConfigOption for option_dict parameters.
             * If a full option dict is passed as an arg (not kwarg) it must contain a 'name' key.
-            * Args and kwargs can be mixed if needed... for example this is also a valid approach:
+            * Args and kwargs can be mixed if needed... for example this is also a valid approach::
+
                 add(option1, <full_option_dict>, option3=default_value, option4={full_option_dict}
+
             * If options are repeated in the same commane, kwargs will take precdence over args,
-                and new options will overwrite old ones.
+              and new options will overwrite old ones.
             * if there are existing options in the section with the same name, an error will be raised.
         """
         tmp_options = []
@@ -1036,23 +987,6 @@ class ConfigSection(object):
 
 class ConfigManager(object):
 
-    """
-        Changes from ConfigParser
-
-        defaults:
-            defaults now set at the section/option level, if included in the base class init params, these will be
-            added to EVERY section and a WARNING will be raised.
-
-            #: TODO This will be moved to a sub class.
-
-        storage locations
-            muliple storage locations can be defined and registered, for example, allowing settings to be split up for
-            local, user, and global settings.
-
-            allow_add_from_storage : set to true (the default) any new options found in the storage location
-            will be added, if set to False, we will only add pre-defined options.
-
-    """
     # Interpolation algorithm to be used if the user does not specify another
     _DEFAULT_INTERPOLATION = Interpolation()
     _DEFAULT_SECT_NAME = "__DEFAULT__"
@@ -1081,7 +1015,6 @@ class ConfigManager(object):
                  **kwargs
                  ):
         """
-
         :param allow_no_value: allow empty values.
         :param empty_lines_in_values:
         :param allow_add_from_storage: allow adding sections and options directly from the storage
@@ -1123,8 +1056,6 @@ class ConfigManager(object):
             self._interpolation = self._DEFAULT_INTERPOLATION
         if self._interpolation is None:
             self._interpolation = Interpolation()
-
-        self._filter_eng = Filter()
 
         self._cli_flags = []
         self._cli_args = {}
@@ -1181,10 +1112,7 @@ class ConfigManager(object):
 
     def add(self, *args, **kwargs):
         """
-        Adds configuration options
-
-        :param args:
-        :param kwargs:
+        Adds configuration options::
 
             add('section1', 'section2', 'section3')
             add(section_def_dict1, section_def_dict2, section_def_dict3)
@@ -1195,22 +1123,26 @@ class ConfigManager(object):
             add(section_name=section_def_dict, section_name2=section_def_dict)
             add(section_name=[list_of_option_names or dicts], section_name=(list of option names or dicts]
 
+        section_def_dict keys
 
-            section_def_dict options:
-                {'name':,
-                 'verbose_name': None,    # the verbose name of the section
-                 'description': None,      # a long description of the section
-                 'storage': None,           # the name of the storage location (if used)
-                 'keep_if_empty': False,      # keep the section even if all options ahve been deleted
-                 'store_default': False,      # store defaults in storage medium
-                 'locked': False,            # if True, do not allow any changes to the section
-                 'allow_create_on_load': True,  # allow new options to be created directly from the storage medium
-                        for example, if you hand edit the ini file and add new options
-                 'option_defaults': None,  # allows a dict to be passed with defaults for any new options in this section
-                        this will replace any system wide option defaults specified.
-                 'options': None, provides a list of options to be added to the section,
+        ======================= ==========  ============================================================================
+        Key                     Default     Description
+        ======================= ==========  ============================================================================
+        'name'                  None        The name of the section
+        'verbose_name'          None        The verbose name of the section
+        'description'           None        A long description of the section
+        'storage'               None        The name of the storage location (if used)
+        'keep_if_empty'         False       Keep the section even if all options ahve been deleted
+        'store_default'         False       Store defaults in storage medium
+        'locked'                False       If True, do not allow any changes to the section
+        'allow_create_on_load'  True        Allow new options to be created directly from the storage medium
+                                            for example, if you hand edit the ini file and add new options
+        'option_defaults'       None        Allows a dict to be passed with defaults for any new options in this section
+                                            this will replace any system wide option defaults specified.
+        'options'               None        Provides a list of options to be added to the section,
+        ======================= ==========  ============================================================================
 
-        .. note:: When no sections are used, this will redirect to :class:py:`ConfigSection.add`
+        .. note:: When no sections are used, this will redirect to :py:meth:`ConfigSection.add`
 
         """
 

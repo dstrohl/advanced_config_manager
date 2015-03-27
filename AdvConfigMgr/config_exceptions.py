@@ -1,11 +1,8 @@
 __author__ = 'dstrohl'
 
 
-
-
-
 import warnings
-from PythonUtils import IndentedPrinter
+from AdvConfigMgr.utils import IndentedPrinter
 
 ip = IndentedPrinter().set_logger('CFG_MGR').set_logger_disp_level('debug')
 
