@@ -7,10 +7,11 @@ __author__ = 'strohl'
 
 import inspect
 import pprint
-from Lib.string import Formatter
+from string import Formatter
 import ast
 import os
 import logging
+
 
 from AdvConfigMgr.utils.base_utils import get_before, get_between, swap
 from AdvConfigMgr.utils.clicker_counter import Clicker
