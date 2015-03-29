@@ -52,7 +52,6 @@ class BaseConfigStorageManager(object):
     lock_after_read = False
 
     def __init__(self,
-                 manager,
                  storage_name=None,
                  allow_create=None,
                  standard=None,
@@ -61,7 +60,6 @@ class BaseConfigStorageManager(object):
                  lock_after_read=None,
                  priority=100):
         """
-        :param ConfigManager manager: a link to the :py:class:`ConfigManager` object.
         :param str storage_name: The internal name of the storage manager, must be unique
         :param bool allow_create: True if this can create options in the system, even if they are not pre-configured.
         :param bool standard:  True if this should be used for read_all/write_all ops
@@ -71,6 +69,8 @@ class BaseConfigStorageManager(object):
         :param int priority: the priority of this manager, with smallest being run earlier than larger.
         :return:
         """
+        self.manager = None   # this is set during registration.
+
         self.storage_name = storage_name or self.storage_name
         self.allow_create = allow_create or self.allow_create
         self.force = force or self.force
@@ -84,7 +84,6 @@ class BaseConfigStorageManager(object):
         self.last_section_count = 0
         self.last_option_count = 0
 
-        self.manager = manager
 
         self.data = None
 

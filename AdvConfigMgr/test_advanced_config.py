@@ -382,7 +382,7 @@ class TestConfigManager(unittest.TestCase):
         item = dict(name='test', cli_options=self.cli_args_std)
         s.add(item)
 
-        self.c.read(storage_tags='cli', data=['-std=hello'])
+        self.c.read(storage_names='cli', data=['-std=hello'])
 
         tmp_resp = s['test']
 
@@ -396,7 +396,7 @@ class TestConfigManager(unittest.TestCase):
 
         self.assertEqual(s['test'], [1, 2, 3])
 
-        self.c.read(storage_tags='cli', data=['-nargs', 'a', 'b'])
+        self.c.read(storage_names='cli', data=['-nargs', 'a', 'b'])
 
         self.assertEqual(s['test'], ['a', 'b'])
 
@@ -408,7 +408,7 @@ class TestConfigManager(unittest.TestCase):
 
         self.assertEqual(s['test'], 'ch1')
 
-        self.c.storage.read(storage_tags='cli',data=['-ch=ch2'])
+        self.c.storage.read(storage_names='cli',data=['-ch=ch2'])
 
         self.assertEqual(s['test'], 'ch2')
 
@@ -418,7 +418,7 @@ class TestConfigManager(unittest.TestCase):
         item = dict(name='test', cli_options=self.cli_args_required)
         s.add(item)
 
-        self.c.read(storage_tags='cli', data=['-req=ch2'])
+        self.c.read(storage_names='cli', data=['-req=ch2'])
 
         self.assertEqual(s['test'], 'ch2')
 
@@ -428,7 +428,7 @@ class TestConfigManager(unittest.TestCase):
         item = dict(name='test', cli_options=self.cli_args_help)
         s.add(item)
 
-        self.c.read(storage_tags='cli', data=['-hlp=ch2'])
+        self.c.read(storage_names='cli', data=['-hlp=ch2'])
 
         self.assertEqual(s['test'], 'ch2')
 
@@ -445,7 +445,7 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(s['test2'], True)
         self.assertEqual(s['test3'], 'test')
 
-        self.c.read(storage_tags='cli', data=['-dt', '-dtf'])
+        self.c.read(storage_names='cli', data=['-dt', '-dtf'])
 
         self.assertEqual(s['test1'], True)
         self.assertEqual(s['test2'], False)
@@ -453,6 +453,8 @@ class TestConfigManager(unittest.TestCase):
 
 
     def test_simple_config(self):
+        ip.si(False)
+
         c = ConfigManager(no_sections=True)
         c.add(option1='test')
 
@@ -465,21 +467,19 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(c['option1'], 'test2')
 
     def test_dict_manager(self):
-        ip.si(False)
         self.c['section2'].storage_write_to = 'dict'
         self.c['section2']['option2'] = 'test'
         self.c.storage.register_storage(ConfigSimpleDictStorage())
-        tmp_dict = self.c.write(storage_tags='dict')
+        tmp_dict = self.c.write(storage_names='dict')
         tmp_ret_1 = {'SECTION_STD': {}, 'SECTION_DISALLOW_CREATE': {}, 'SECTION_LOCKED': {}, 'SECTION2': {'option2': 'test'}}
         self.assertEqual(tmp_dict, tmp_ret_1)
 
     def test_dict_manager_save_default(self):
-        ip.si(False)
         self.c['section2'].storage_write_to = 'dict'
         self.c['section2'].store_default = True
         self.c['section2']['option2'] = 'test'
         self.c.storage.register_storage(ConfigSimpleDictStorage())
-        tmp_dict = self.c.write(storage_tags='dict')
+        tmp_dict = self.c.write(storage_names='dict')
         tmp_ret_1 = {'SECTION_STD': {}, 'SECTION_LOCKED': {}, 'SECTION_DISALLOW_CREATE': {}, 'SECTION2': {'option3': 'opt3', 'od_int1_do_not_change': 1, 'od_string2_default': 'default_od_string', 'option5': 'opt5', 'option2': 'test'}}
         print(tmp_dict)
 

@@ -579,18 +579,23 @@ class ConfigSection(object):
 
         self._cli_args = {}
 
-        if self.manager.use_versioning:
+        self.version = version
 
-            if version is None:
+        if version is None:
+            if self.manager.version is None:
+                if self.manager._enforce_versioning:
+                    raise AttributeError('Versioning is required, but no version found')
+            else:
                 self.version = self.manager.version
-            else:
-                self.version = self.manager._version_class(version)
+        else:
+            self.version = self.manager._version_class(version)
 
-            if version_option_name is None:
-                self._version_option_name = self.manager._version_option_name
-            else:
-                self._version_option_name = version_option_name.format(section=self.name)
+        if version_option_name is None:
+            self._version_option_name = self.manager._version_option_name.format(section=self.name)
+        else:
+            self._version_option_name = version_option_name.format(section=self.name)
 
+        if self.version is not None:
             tmp_version_dict = {'name': self._version_option_name,
                                 'default_value': self.version,
                                 'verbose_name': 'Section Version Number',
@@ -601,9 +606,7 @@ class ConfigSection(object):
 
             self.add(tmp_version_dict)
 
-        else:
-            self.version = ''
-            self._version_option_name = ''
+
 
 
 
@@ -978,6 +981,20 @@ class ConfigSection(object):
 
         self._options[name] = ConfigOption(self, name, *args, **with_defaults)
 
+    @property
+    def options(self):
+        return self._options
+
+    @property
+    def manager(self):
+        # The parser object of the proxy is read-only.
+        return self._manager
+
+    @property
+    def name(self):
+        # The name of the section on a proxy is read-only.
+        return self._name
+
     def __repr__(self):
         return 'ConfigSection: {}'.format(self._name)
 
@@ -998,22 +1015,8 @@ class ConfigSection(object):
         return len(self.options)
 
     def __iter__(self):
-        for key, item in self.options.items():
-            yield item
-
-    @property
-    def options(self):
-        return self._options
-
-    @property
-    def manager(self):
-        # The parser object of the proxy is read-only.
-        return self._manager
-
-    @property
-    def name(self):
-        # The name of the section on a proxy is read-only.
-        return self._name
+        for key, opt in self.options.items():
+            yield opt
 
 
 class ConfigManager(object):
@@ -1045,9 +1048,10 @@ class ConfigManager(object):
                  raise_error_on_locked_edit=False,
                  storage_managers=None,
                  version_class=None,
-                 version='',
-                 version_option_name='{section}_v(version}',
+                 version=None,
+                 version_option_name='{section}_version_number',
                  version_allow_unversioned=True,
+                 version_enforce_versioning=False,
                  **kwargs
                  ):
         """
@@ -1077,6 +1081,8 @@ class ConfigManager(object):
             replaced by the name of the section.
         :param bool version_allow_unversioned: if True, the system will import unversioned data, if false, the version
             of the data must be specified when importing any data.
+        :param bool version_enforce_versioning: if True, the system will raise an error if no version is set at the
+            section or base level.
         :param kwargs: if "no_sections" is set, all section options can be passed to the ConfigManager object.
         """
 
@@ -1092,6 +1098,28 @@ class ConfigManager(object):
         self._cli_group_by_section = cli_group_by_section
         self._raise_error_on_locked_edit = raise_error_on_locked_edit
         self._allow_unversioned = version_allow_unversioned
+        self._enforce_versioning = version_enforce_versioning
+
+        self._version_option_name = version_option_name
+
+        if version_class is None:
+            self._version_class = LooseVersion
+        else:
+            if isinstance(version_class, str):
+                if version_class == 'loose':
+                    self._version_class = LooseVersion
+                elif version_class == 'strict':
+                    self._version_class = StrictVersion
+                else:
+                    raise AttributeError('Invalid version class passed')
+            else:
+                self._version_class = version_class
+
+        if version is not None:
+            ip.debug('Version is not None, setting version to: ', version)
+            self._version = self._version_class(version)
+        else:
+            self._version = None
 
         if section_defaults:
             self.section_defaults = section_defaults
@@ -1115,25 +1143,6 @@ class ConfigManager(object):
 
         if self._no_sections:
             self.add_section(self._DEFAULT_SECT_NAME, force_add_default=True, **kwargs)
-
-        if version is None:
-            self.use_versioning = False
-            self._version = None
-            self._version_option_name = None
-        else:
-            if isinstance(version, str):
-                if version_class == 'loose':
-                    self._version_class = LooseVersion
-                elif version_class == 'strict':
-                    self._version_class = StrictVersion
-            else:
-                self._version_class = version
-
-            if version:
-                self._version = self._version_class(version)
-                self._version_option_name = version_option_name
-            else:
-                raise AttributeError('Versioning active, but no version configured')
 
     @property
     def version(self):
@@ -1329,11 +1338,11 @@ class ConfigManager(object):
     def storage(self):
         return self._storage
 
-    def write(self, sections=None, storage_tags=None, override_tags=False):
+    def write(self, sections=None, storage_names=None, override_tags=False):
         """
         runs the write to storage process for the selected or configured managers
 
-        :param storage_tags: If None, will write to all starnard storage managers, if a string or list, will write to the
+        :param storage_name: If None, will write to all starnard storage managers, if a string or list, will write to the
             selected ones following the configured tag settings.
         :param sections: If None, will write to all sections, if string or list, will write to the selected ones
             following the configured tag settings.
@@ -1341,13 +1350,13 @@ class ConfigManager(object):
             exporting the full config etc.
         :return: if ONLY one storage_tag is passed, this will return the data from that manager if present.
         """
-        return self.storage.write(sections=sections, storage_tags=storage_tags, override_tags=override_tags)
+        return self.storage.write(sections=sections, storage_names=storage_names, override_tags=override_tags)
 
-    def read(self, sections=None, storage_tags=None, override_tags=False, data=None):
+    def read(self, sections=None, storage_names=None, override_tags=False, data=None):
         """
         runs the read from storage process for the selected or configured managers
 
-        :param storage_tags: If None, will read from all starnard storage managers, if a string or list, will read from
+        :param storage_name: If None, will read from all starnard storage managers, if a string or list, will read from
             the selected ones following the configured tag settings.
         :param sections: If None, will read from all sections, if string or list, will read from the selected ones
             following the configured tag settings.
@@ -1356,7 +1365,7 @@ class ConfigManager(object):
         :param data: if a single storage tag is passed, then data can be passed to that storage manager for saving.
             this will raise an AssignmentError if data is not None and more than one storage tag is passed.
         """
-        self.storage.read(sections=sections, storage_tags=storage_tags, override_tags=override_tags, data=data)
+        self.storage.read(sections=sections, storage_names=storage_names, override_tags=override_tags, data=data)
 
     """
     def read(self, filenames, encoding=None):
