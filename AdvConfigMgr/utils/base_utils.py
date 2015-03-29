@@ -8,10 +8,12 @@ __all__ = ['args_handler', 'GenericMeta', 'DictKey2Method', 'AdvDict', 'DBList',
            'get_before', 'get_not_in', 'get_same', 'get_meta_attrs', 'remove_dupes', 'list_in_list', 'list_not_in_list',
            'count_unique', 'index_of_count', 'ListPlus', 'LookupManager', 'is_iterable', 'is_string', 'Error', 'Path',
            'OrderedSet', 'swap', 'replace_between', 'format_as_decimal_string', 'MultiLevelDictManager',
-           'elipse_trim', 'concat', 'generate_percentages', 'convert_to_boolean', 'slugify']
+           'elipse_trim', 'concat', 'generate_percentages', 'convert_to_boolean', 'slugify', 'merge_dictionaries']
 
 import copy
+import sys
 import collections
+from string import Formatter
 from decimal import Decimal
 
 
@@ -258,7 +260,6 @@ class Path(object):
         else:
             return False
 
-
     def __bool__(self):
         if self._pwd == [] and self.item == '':
             return False
@@ -266,6 +267,26 @@ class Path(object):
             return True
 
     __repr__ = __str__
+
+
+def merge_dictionaries(*args, depth=0, max_depth=10):
+    tmp_out_dict = {}
+
+    if depth == max_depth:
+        raise AttributeError('Merge dictionaries recussion depth max reached!')
+
+    for arg in args:
+        if is_iterable(arg):
+            depth += 1
+            tmp_out_dict.update(merge_dictionaries(arg, depth))
+
+        elif isinstance(arg, dict):
+            tmp_out_dict.update(arg)
+
+        else:
+            raise TypeError('Merge dictionaries only accepts iterables of dictionaries')
+
+    return tmp_out_dict
 
 
 class MultiLevelDictManager(object):

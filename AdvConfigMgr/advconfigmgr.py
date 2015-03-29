@@ -129,6 +129,7 @@ from AdvConfigMgr.config_storage import *
 from collections import OrderedDict as _default_dict, ChainMap as _ChainMap
 from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slugify
 import copy
+from distutils.version import StrictVersion, LooseVersion, Version
 
 __all__ = ["NoSectionError", "DuplicateOptionError", "DuplicateSectionError",
            "NoOptionError", "InterpolationError", "InterpolationDepthError",
@@ -167,8 +168,8 @@ class ConfigOption(object):
         :param bool required_after_load: Default = False, If set to true, the app should not start without this being set.
             if there is a CLI_option available, the app should prompt the user for that option, if not, the app should
             fail with a usefull message.
-        :param bool autoconvert: will attempt to autoconvert values to the datatype, this can be disabled if needed. (some
-            types of data may not autoconvert correctly.)
+        :param bool autoconvert: will attempt to autoconvert values to the datatype, this can be disabled if needed.
+            (some types of data may not autoconvert correctly.)
         """
         self._section = section
         self._name = self.section.manager.optionxform(name)
@@ -521,10 +522,9 @@ class ConfigSection(object):
                  dict_type=_default_dict,
                  cli_section_title=None,
                  cli_section_desc=None,
-                 section_version='0.0',
-                 section_version_upgrade=None):
+                 version=None,
+                 version_option_name=None):
         """
-        :param str section_version: This is the version of data that is stored in this section.
         :param ConfigManager manager: A pointer to the config manager
         :param str name: The name of the section
         :param str verbose_name: The verbose name of the section
@@ -539,8 +539,11 @@ class ConfigSection(object):
         :param bool store_default: store defaults in storage medium
         :param bool locked: if True, do not allow any changes to the section
         :param dict_type: the dictionary type to be used.
-        :param str cli_section_name: the name of the section in the CLI (if sectioned), Defaults to verbose_name
+        :param str cli_section_title: the name of the section in the CLI (if sectioned), Defaults to verbose_name
         :param str cli_section_desc: the description for the section in the CLI (if sectioned), Defaults to description
+        :param str version: the version number of the section, if None, this will take the version number of the
+            ConfigManager object.
+        :param str version_option_name: allows for overriding the ConfigManager's version_option_name setting.
         """
 
         self._manager = manager
@@ -575,6 +578,34 @@ class ConfigSection(object):
             self._cli_section_options['title'] = cli_section_title
 
         self._cli_args = {}
+
+        if self.manager.use_versioning:
+
+            if version is None:
+                self.version = self.manager.version
+            else:
+                self.version = self.manager._version_class(version)
+
+            if version_option_name is None:
+                self._version_option_name = self.manager._version_option_name
+            else:
+                self._version_option_name = version_option_name.format(section=self.name)
+
+            tmp_version_dict = {'name': self._version_option_name,
+                                'default_value': self.version,
+                                'verbose_name': 'Section Version Number',
+                                'description': 'The version number for this section',
+                                'keep_if_empty': True,
+                                'do_not_change': True,
+                                'do_not_delete': True}
+
+            self.add(tmp_version_dict)
+
+        else:
+            self.version = ''
+            self._version_option_name = ''
+
+
 
     @property
     def section_ok_after_load(self):
@@ -997,6 +1028,7 @@ class ConfigManager(object):
     #: TODO: Document system.
 
     def __init__(self,
+                 name='Configuration',
                  # dict_type=_default_dict,
                  allow_no_value=False,
                  *,
@@ -1012,6 +1044,10 @@ class ConfigManager(object):
                  cli_parser_name='cli',
                  raise_error_on_locked_edit=False,
                  storage_managers=None,
+                 version_class=None,
+                 version='',
+                 version_option_name='{section}_v(version}',
+                 version_allow_unversioned=True,
                  **kwargs
                  ):
         """
@@ -1023,7 +1059,8 @@ class ConfigManager(object):
             .. warning:: converting from simple configurations to sections may require manual data minipulation!
         :param section_defaults: a dictionary of settings used as defaults for all sections created
         :param interpolation: can be defined if interpolation is requested or required.
-        :param cli_program: the name of the program for the cli help screen (normally not needed)
+        :param cli_program: the name of the program for the cli help screen (by default this will use the program run
+            to launch the app)
         :param cli_desc: the text to show above the arguments in the cli help screen.
         :param cli_epilog: the text to show at the end of the arguments in the cli help screen.
         :param raise_error_on_locked_edit: if True, will raise an error if an attempt to change locked options,
@@ -1033,9 +1070,17 @@ class ConfigManager(object):
         :param cli_parser_name: the name of the cli parser if not the default.  set to None if the CLI parser
             is not to be used.
         :param cli_group_by_section: True if cli arguments shoudl be grouped by section for help screens.
+        :param version_class: 'loose', 'strict', a subclass of the Version class or None for no versioning.
+        :type version_class: Version or str or None
+        :param str version: the version number string.
+        :param str version_option_name: the option named used to store the version for each section, {section} will be
+            replaced by the name of the section.
+        :param bool version_allow_unversioned: if True, the system will import unversioned data, if false, the version
+            of the data must be specified when importing any data.
         :param kwargs: if "no_sections" is set, all section options can be passed to the ConfigManager object.
         """
 
+        self._name = name
         self._dict = _default_dict
         self._sections = self._dict()
         self._allow_no_value = allow_no_value
@@ -1046,6 +1091,7 @@ class ConfigManager(object):
         self._cli_parser_args = {'prog': cli_program, 'description': cli_desc, 'epilog': cli_epilog}
         self._cli_group_by_section = cli_group_by_section
         self._raise_error_on_locked_edit = raise_error_on_locked_edit
+        self._allow_unversioned = version_allow_unversioned
 
         if section_defaults:
             self.section_defaults = section_defaults
@@ -1070,6 +1116,32 @@ class ConfigManager(object):
         if self._no_sections:
             self.add_section(self._DEFAULT_SECT_NAME, force_add_default=True, **kwargs)
 
+        if version is None:
+            self.use_versioning = False
+            self._version = None
+            self._version_option_name = None
+        else:
+            if isinstance(version, str):
+                if version_class == 'loose':
+                    self._version_class = LooseVersion
+                elif version_class == 'strict':
+                    self._version_class = StrictVersion
+            else:
+                self._version_class = version
+
+            if version:
+                self._version = self._version_class(version)
+                self._version_option_name = version_option_name
+            else:
+                raise AttributeError('Versioning active, but no version configured')
+
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def name(self):
+        return self._name
 
     def sections(self):
         """Return a list of section names"""
