@@ -2,7 +2,7 @@ __author__ = 'dstrohl'
 
 from pathlib import Path
 
-__all__ = ['PathHandlerh',]
+__all__ = ['PathHandler', ]
 
 
 class PathHandler(object):
