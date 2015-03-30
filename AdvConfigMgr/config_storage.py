@@ -42,6 +42,9 @@ class BaseConfigStorageManager(object):
     to be passed.
 
     """
+
+     #: TODO Add Record Based Storage
+
     storage_type_name = 'Base'
     storage_name = None
     force_strings = False

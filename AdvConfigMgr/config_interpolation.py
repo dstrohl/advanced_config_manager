@@ -2,11 +2,17 @@ __author__ = 'dstrohl'
 
 from AdvConfigMgr.utils import interpolate, validate_interpolation_str
 
-__all__ = ['Interpolation']
+__all__ = ['Interpolation', 'NoInterpolation']
 
 
 class BaseInterpolation:
     """Dummy interpolation that passes the value through with no changes."""
+
+    def __init__(self, key='%', sep='.', enc='()', max_depth=10):
+        self.key = key
+        self.sep = sep
+        self.enc = enc
+        self.max_depth = max_depth
 
     def before_get(self, config_root, section_name, value):
         """
@@ -61,14 +67,11 @@ class BaseInterpolation:
         return value
 
 
+class NoInterpolation(BaseInterpolation):
+    pass
+
+
 class Interpolation(BaseInterpolation):
-    key = '%'
-    sep = '.'
-    max_depth = 10
-    enc = '()'
-
-
-
     """Interpolation as implemented in the classic ConfigParser.
 
     The option values can contain format strings which refer to other values in
@@ -86,11 +89,6 @@ class Interpolation(BaseInterpolation):
     can also handle taking section option
 
     """
-
-    def __init__(self, key=key, sep=sep, enc=enc):
-        self.key = key
-        self.sep = sep
-        self.enc = enc
 
     def before_get(self, config_root, section_name, value):
         return interpolate(value,
