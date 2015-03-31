@@ -65,6 +65,64 @@ class BaseVersionMigrator(object):
     Note: storage managers with centralized storage, care shoudl be taken when migrating data to make sure that
     multiple versions are not in use concurrently.
 
+    actions is a list of actions to take, each action definition is a tuple, with the first item being the action,
+    and the remainder being parameters for the action if needed.
+
+    Actions tuple examples
+
+    Remove:
+        These options will be removed and deleted from storage.
+        ::
+
+        ('remove','option_name')
+
+    Rename::
+
+        ('rename','old_option_name','new_option_name', <optional>'interpolation_string')
+
+    Copy:
+        This also allows copying from another section if a name is passed using dot notation.
+
+        ::
+        ('copy','old_option_name','new_option_name', <optional>'interpolation_string)
+        ('copy','old_section.old_option_name,'new_option_name', <optional>'interpolation_string)
+
+    Pass:
+        These will just be passed through, not needed unless the "keep_only" flag is used
+
+        ::
+        ('pass','option_name')
+
+    Interpolate:
+        This runs the option through a simple interpolator, allowing for some simple conversions.
+
+        ::
+
+        ('interpolate','option_name','interpolation_string')
+
+    Convert_Object:
+        For more complex conversion needs, converters can be passed, kwargs dict can also be
+        defined if needed.
+
+        ::
+
+        ('converter','option_name', converter_name, kwargs)
+
+    example::
+
+        [('remove','this_option'),
+         ('copy','another_option','to_another_name')]
+
+    The 'remove', 'pass', and 'converter' actions can all take glob type wildcards ('*', '?', '!', '[]')
+
+    For interpolations, use '%(__current_value__)' for the current value, %(option_name), %(section_name.option_name) to
+    pull in othe values.
+
+    By default, options without actions will simply be passed through unless the "keep_only" flag is set.
+
+    (1) Only record based storage managers will delete these from the storage medium.  others will rely on the object
+    not being present in the config since the entire config is re-written to the storage overwriting the old one.
+
     """
     from_version_min = None
     from_version_max = None
@@ -74,46 +132,6 @@ class BaseVersionMigrator(object):
     to_version_max = None
     to_version = None
 
-    """
-    actions is a list of actions to take, each action definition is a tuple, with the first item being the action,
-    and the remainder being parameters for the action if needed.
-    
-    Actions tuple examples:
-    Remove: (these options will be removed and deleted from storage)
-        ('remove','option_name')
-
-    Rename:
-        ('rename','old_option_name','new_option_name', <optional>'interpolation_string')
-
-    Copy: (this also allows copying from another section if a name is passed using dot notation)
-        ('copy','old_option_name','new_option_name', <optional>'interpolation_string)
-        ('copy','old_section.old_option_name,'new_option_name', <optional>'interpolation_string)
-
-    Pass: (these will just be passed through, not needed unless the "keep_only" flag is used)
-        ('pass','option_name')
-
-    Interpolate:  (this runs the option through a simple interpolator, allowing for some simple conversions)
-        ('interpolate','option_name','interpolation_string')
-
-    Convert_Object: (for more complex conversion needs, converters can be passed, kwargs dict can also be
-        defined if needed)
-
-        ('converter','option_name', converter_name, kwargs)
-
-    example:
-        [('remove','this_option'),
-         ('copy','another_option','to_another_name')]
-
-    The 'remove', 'pass', and 'converter' actions can all take glob type wildcards ('*', '?', '!', '[]') 
-
-    For interpolations, use '%(__current_value__)' for the current value, %(option_name), %(section_name.option_name) to
-    pull in othe values.
-
-    By default, options without actions will simply be passed through unless the "keep_only" flag is set.
-
-    (1) Only record based storage managers will delete these from the storage medium.  others will rely on the object
-    not being present in the config since the entire config is re-written to the storage overwriting the old one.
-    """
     actions = None
 
     # if True, only options in the list will be kept, for record based storage all others will be deleted

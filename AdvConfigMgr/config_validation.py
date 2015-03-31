@@ -18,8 +18,22 @@ class ValidationWarning(Warning):
 
 
 class ValidationsBase(object):
+    """
+    This is the base object that all other validation objects shoudl be based on.  it is pretty simple at this point
+    and is mainly a framework for consistency.
+    """
 
     def validate(self, data):
+        """
+        This is the main method for validation.  This is called by the configuration manager and the data is passed to
+        it.  it should return that same data if it is validated, or raise an error or warning if not.
+
+        Raising an error will stop the processing, raising a warning will simply log the problem, and the developer
+        can choose to poll the error queue and display the errors.
+
+        :param data:
+        :return:
+        """
         return data
 
 
