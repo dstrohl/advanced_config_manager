@@ -244,6 +244,13 @@ class BaseVersionMigrator(object):
         return True
 
     def convert(self, option, value):
+        """
+        This is the main interface with the version migration tool.  you pass the option name and the current value, and
+        it will return the new option name (or old one if unchanged) and the migrated value.
+        :param option:
+        :param value:
+        :return:
+        """
         std_action = ['rename', 'pass', 'interpolate', 'converter']
 
         if option in self.action_dict:
