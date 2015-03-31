@@ -15,11 +15,11 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   intro
-   concepts
-   tutorial
-   configuration
-   extending
+   docs/intro
+   docs/concepts
+   docs/usage/tutorial
+   docs/api/configuration
+   docs/extending/extending
 
 
 
