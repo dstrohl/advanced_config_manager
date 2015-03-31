@@ -20,7 +20,7 @@ Contents:
    docs/usage/tutorial
    docs/api/configuration
    docs/extending/extending
-
+   docs/license
 
 Indices and tables
 ==================
