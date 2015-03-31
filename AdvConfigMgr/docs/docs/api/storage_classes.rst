@@ -18,3 +18,8 @@ Record-Based:
     These are the most complex managers and are normally based on databases.  These have the ability to read or write
     options individually.
 
+
+.. toctree::
+   :maxdepth: 2
+
+   configstorage
