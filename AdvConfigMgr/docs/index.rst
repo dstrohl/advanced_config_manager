@@ -6,6 +6,10 @@
 Welcome to Advanced Configuration Manager's documentation!
 ==========================================================
 
+This is a configuration management plugin that helps with complex applications managing their basic settings.  Often,
+these settings are stored as global vars in setup.py, settings.py, __init__.py files, but this does not scale well,
+nor is it easilly managable from within an app from a conifugration screen.  This plugin helps with all of this.
+
 Contents:
 
 .. toctree::
