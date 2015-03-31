@@ -153,12 +153,15 @@ class ConfigOption(object):
             'str', 'int', 'float', 'list', 'dict' additional data types can be defined using the DataTypeBase class.
             If set to None and there is a default value set, this will take the datatype of the default value,
             otherwise it will be set to 'str'
-        :param str or None verbose_name: Default=None This is the long name for the option (that can show up in the options
+        :param verbose_name: Default=None This is the long name for the option (that can show up in the options
             configuration screen or help screen)  This is set to a title case version of the option name with spaces
             replacing '_'
-        :param str or None description: Default=None This is the long description for the option, available in the help screens.
-        :param dict, str or None cli_option: Default=None  This allows the option to be changed via the CLI on startup, this would be a
+        :type verbose_name: str or None
+        :param description: Default=None This is the long description for the option, available in the help screens.
+        :type description: str or None
+        :param cli_option: Default=None  This allows the option to be changed via the CLI on startup, this would be a
             string, tuple or dictionary of options that configure how the cli commands will be handled.
+        :type cli_option: str or None
         :param object validations: Default=None: This is a set of validation classes to be run for any options saved.
         :param bool keep_if_empty: Default=True: If set to False the option will be deleted when the value is cleared AND
             there is no set default value.
