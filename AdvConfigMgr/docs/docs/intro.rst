@@ -24,14 +24,24 @@ The Advanced Configuration Manager will provide the following features:
     * entry validation
     * interpolation of variables
     * clean API for adding features
+    * upgrade / downgrade scripts for fixing configs
 
-    .. todo::
-        * upgrade / downgrade scripts for fixing configs
-        * logging and auditing
-        * lightweight configuration reader, heavy manager.
-        * support for authentication systems
 
 The API allows for easilly adding the following items:
     * new configuration datatypes
     * new validations
     * new storage methods and systems
+
+Requirements
+------------
+
+At this point, this only works with python 3.4.  It should be pretty easy to backport it to other 3.x versions, and I
+dont think it woudl be a major job to port to 2.x if there was enough call for it.
+
+
+.. todo::
+    * logging and auditing
+    * lightweight configuration reader, heavy manager.
+    * support for authentication systems
+
+

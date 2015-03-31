@@ -22,7 +22,6 @@ Contents:
    docs/extending/extending
 
 
-
 Indices and tables
 ==================
 
@@ -30,3 +29,11 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+
+Build / Test Status
+===================
+From Travis-CI.org (this is probably red since it is testing all versions of Python against it.  sorry, it only works
+with 3.4 for now).
+
+.. image:: https://travis-ci.org/dstrohl/advanced_config_manager.svg?branch=master
+    :target: https://travis-ci.org/dstrohl/advanced_config_manager
