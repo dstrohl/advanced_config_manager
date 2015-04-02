@@ -1,10 +1,6 @@
 language: python
 python:
   - "3.4"
-  - "3.3"
-  - "3.2"
-  - "2.7"
-  - "2.6"
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 # install: PLEASE CHANGE ME
 # command to run tests, e.g. python setup.py test
@@ -13,6 +9,5 @@ notifications:
   email:
     recipients:
       - dan@wjcg.net
-      - d.strohl@f5.com
     on_success: always
     on_failure: always

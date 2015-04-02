@@ -12,11 +12,11 @@ import ast
 import os
 import logging
 
-
 from AdvConfigMgr.utils.base_utils import get_before, get_between, swap
 from AdvConfigMgr.utils.clicker_counter import Clicker
 from AdvConfigMgr.utils.flag_manager import Flagger
 from os import path
+
 
 class IPFormatter(Formatter):
     def __init__(self, iph):
@@ -29,7 +29,7 @@ class IPFormatter(Formatter):
         if isinstance(key, int):
             return args[key]
         else:
-            test_key = get_before(key,'(')
+            test_key = get_before(key, '(')
             if key in self._iph_properties:
                 return getattr(self._iph, key)
 
@@ -39,13 +39,13 @@ class IPFormatter(Formatter):
 
             elif test_key in self._iph_methods:
                 iph_meth = getattr(self._iph, test_key)
-                iph_args, iph_kwargs = self._parse_args(get_between(key,'(',')'))
+                iph_args, iph_kwargs = self._parse_args(get_between(key, '(', ')'))
                 return iph_meth(*iph_args, **iph_kwargs)
             else:
                 return kwargs[key]
 
 
-    def _parse_args(self,key_string):
+    def _parse_args(self, key_string):
         if key_string.endswith('=') or key_string.startswith('='):
             raise AttributeError('format key args must not start or end with "="')
         tmp_arg_list = key_string.split(',')
@@ -56,7 +56,7 @@ class IPFormatter(Formatter):
         for offset, arg in enumerate(tmp_arg_list):
             if arg == '=':
                 tmp_arg_list_2.pop()
-                tmp_str = tmp_arg_list[offset-1]+tmp_arg_list[offset]+tmp_arg_list[offset+1]
+                tmp_str = tmp_arg_list[offset - 1] + tmp_arg_list[offset] + tmp_arg_list[offset + 1]
                 tmp_arg_list_2.append(tmp_str)
                 skip_next = True
             elif arg == '':
@@ -66,14 +66,13 @@ class IPFormatter(Formatter):
                 if not skip_next:
                     tmp_arg_list_2.append(arg)
 
-
         for arg in tmp_arg_list_2:
             if '=' in arg:
                 tmp_kwarg = arg.split('=')
                 kwargs_dict[tmp_kwarg[0]] = ast.literal_eval(tmp_kwarg[1])
             else:
                 args_list.append(arg)
-                #args_list.append(ast.literal_eval(arg))
+                # args_list.append(ast.literal_eval(arg))
 
         return args_list, kwargs_dict
 
@@ -84,7 +83,8 @@ class Colorizer(object):
     del ATTRIBUTES['']
     HIGHLIGHTS = dict(list(zip(['on_grey', 'on_red', 'on_green', 'on_yellow',
                                 'on_blue', 'on_magenta', 'on_cyan', 'on_white'], list(range(40, 48)))))
-    COLORS = dict(list(zip(['grey','red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'], list(range(30, 38)))))
+    COLORS = dict(
+        list(zip(['grey', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'], list(range(30, 38)))))
     RESET = '\033[0m'
 
     def __init__(self, presets=None):
@@ -99,7 +99,7 @@ class Colorizer(object):
         try:
             return self(self._presets[item])
         except KeyError:
-            raise KeyError('preset '+item+' not found in list of presets')
+            raise KeyError('preset ' + item + ' not found in list of presets')
 
     def __call__(self, *args):
         color, on_color, attrs = self._param(*args)
@@ -109,7 +109,7 @@ class Colorizer(object):
 
         if len(args) == 1:
             if isinstance(args[0], str):
-                tmp_arg = args[0].replace(',',' ')
+                tmp_arg = args[0].replace(',', ' ')
                 if ' ' in tmp_arg:
                     args = tmp_arg.split()
             elif isinstance(args[0], (list, tuple)):
@@ -130,7 +130,6 @@ class Colorizer(object):
 
                 elif a in self.HIGHLIGHTS:
                     on_color = a
-
 
         return color, on_color, attrib
 
@@ -173,7 +172,6 @@ class Colorizer(object):
         return text
 
 
-
     def colored(self, text, color=None, on_color=None, attrs=None):
         """Colorize text.
 
@@ -207,22 +205,21 @@ class Colorizer(object):
 
 
 class IndentedPrintHelper(object):
-
-    _exposed_properties = ('crlf','stack','lf')
-    _exposed_methods = ('counter','func_name','sep_line','new_line','color',
-                        'f','c','nl','sep','co', 'color_preset', 'cp')
+    _exposed_properties = ('crlf', 'stack', 'lf')
+    _exposed_methods = ('counter', 'func_name', 'sep_line', 'new_line', 'color',
+                        'f', 'c', 'nl', 'sep', 'co', 'color_preset', 'cp')
 
     _stack_format = '{caller_name} [{last_dir}.{file_name}:{line_num}] |'
     _stack_length_limits = {'__full_string__': {'max_length': 40,
                                                 'pad_to_max': True,
                                                 'end_string': '|'},
-                                                'line_num': {'trim_priority': 0}
+                            'line_num': {'trim_priority': 0}
                             }
-    _default_color_presets = {'prefix':'bold',
-                              'var':'underline',
-                              'critical':'red',
-                              'minor':'grey'}
-    #_render_queue = ''
+    _default_color_presets = {'prefix': 'bold',
+                              'var': 'underline',
+                              'critical': 'red',
+                              'minor': 'grey'}
+    # _render_queue = ''
     #_cw = ColorWrap()
     _color_string = None
     _currently_colored = False
@@ -265,7 +262,7 @@ class IndentedPrintHelper(object):
     # lines and spaces
     # ====================================
 
-    def new_line(self, new_line_count = 1):
+    def new_line(self, new_line_count=1):
         tmp_ret = ''
         for i in range(new_line_count):
             tmp_ret += self.crlf
@@ -286,6 +283,7 @@ class IndentedPrintHelper(object):
     @staticmethod
     def func_name(add_offset=0):
         import traceback
+
         tmp_trace = traceback.extract_stack(None)
         offset = len(tmp_trace) - 4 + add_offset
         return traceback.extract_stack(None)[offset][2]
@@ -318,7 +316,7 @@ class IndentedPrintHelper(object):
         return self.formatted(format_string, *args, **kwargs)
 
     def formatted(self, format_string, *args, **kwargs):
-        format_string = self.prefix+format_string+self.suffix
+        format_string = self.prefix + format_string + self.suffix
         return self._ipf.format(format_string, *args, **kwargs)
 
     # ====================================
@@ -340,10 +338,8 @@ class IndentedPrintHelper(object):
             if not s.startswith('__'):
                 my_attribs.append(s)
 
-
         for s in stack:
             if not s[off_attrib] in my_attribs:
-
                 format_kwargs['full_path'] = s[off_path]
                 format_kwargs['line_num'] = s[off_line]
                 format_kwargs['caller_name'] = s[off_attrib]
@@ -357,7 +353,7 @@ class IndentedPrintHelper(object):
     def _parse_path(self, in_path):
         tmp_path, tmp_fn = path.split(in_path)
         tmp_path, tmp_dir = path.split(tmp_path)
-        return {'start_path':tmp_path, 'last_dir':tmp_dir, 'file_name':tmp_fn}
+        return {'start_path': tmp_path, 'last_dir': tmp_dir, 'file_name': tmp_fn}
 
     # ====================================
     # Shortcuts
@@ -376,7 +372,7 @@ class IndentedPrintHelper(object):
         return self.sep_line(sep_str, strlen)
 
     def f(self, offset=0):
-        return self.func_name(offset+1)
+        return self.func_name(offset + 1)
 
 
 class IndentedPrinter(object):
@@ -502,11 +498,11 @@ class IndentedPrinter(object):
     }
 
     def __init__(self,
-                 indent_spaces = 5,
-                 silence = False,
+                 indent_spaces=5,
+                 silence=False,
                  line_format=_line_format,
-                 stack_format = None,
-                 stack_length_limits = None,
+                 stack_format=None,
+                 stack_length_limits=None,
                  prefix=_prefix,
                  suffix=_suffix,
                  logger=None):
@@ -672,25 +668,24 @@ class IndentedPrinter(object):
             self._logger.log(log_level, msg)
 
     def critical(self, *args):
-        self.println(*args,log_level=logging.CRITICAL)
+        self.println(*args, log_level=logging.CRITICAL)
         return self
 
     def error(self, *args):
-        self.println(*args,log_level=logging.ERROR)
+        self.println(*args, log_level=logging.ERROR)
         return self
 
     def warning(self, *args):
-        self.println(*args,log_level=logging.WARNING)
+        self.println(*args, log_level=logging.WARNING)
         return self
 
     def info(self, *args):
-        self.println(*args,log_level=logging.INFO)
+        self.println(*args, log_level=logging.INFO)
         return self
 
     def debug(self, *args):
-        self.println(*args,log_level=logging.DEBUG)
+        self.println(*args, log_level=logging.DEBUG)
         return self
-
 
 
     # ====================================
@@ -701,12 +696,12 @@ class IndentedPrinter(object):
         self._print_buffer = self._make_line(self._print_buffer, *args)
         return self
 
-    def print(self, *args , **kwargs):
+    def print(self, *args, **kwargs):
         kwargs['end'] = ''
         self._print(*args, **kwargs)
         return self
 
-    def println(self, *args , **kwargs):
+    def println(self, *args, **kwargs):
         kwargs['end'] = '\n'
         self._print(self._print_buffer, *args, **kwargs)
         self._print_buffer = ''
@@ -728,7 +723,7 @@ class IndentedPrinter(object):
             return ''
 
 
-    def _print(self, *args , end = '', **kwargs):
+    def _print(self, *args, end='', **kwargs):
         """
         prints the content to stdout
 
@@ -741,35 +736,34 @@ class IndentedPrinter(object):
                 print_str = self._make_string(*args, **kwargs)
 
             if self._check_for_logger:
-                log_level = kwargs.pop('log_level',self._current_logging_level)
+                log_level = kwargs.pop('log_level', self._current_logging_level)
                 self._log(log_level, print_str)
             else:
                 print('', end=end)
 
-    def _make_string(self, *args , **kwargs):
+    def _make_string(self, *args, **kwargs):
         """
         generates the string to be printed
         """
         sep = kwargs.get('sep', '')
-        skip_helper = kwargs.get('skip_helper',False)
-
+        skip_helper = kwargs.get('skip_helper', False)
 
         padding = ''
         for i in range(self._current_indent * self._indent_spaces): padding += ' '
 
         line = self._make_line(*args, **kwargs)
 
-        return self._line_format.format(padding = padding,
-                                        line = line,
-                                        prefix = self.prefix,
-                                        suffix = self.suffix)
+        return self._line_format.format(padding=padding,
+                                        line=line,
+                                        prefix=self.prefix,
+                                        suffix=self.suffix)
 
     def _make_line(self, *args, **kwargs):
         """
         generates the line to be printed (text without pre/suffix or indent)
         """
         sep = kwargs.get('sep', '')
-        skip_helper = kwargs.get('skip_helper',False)
+        skip_helper = kwargs.get('skip_helper', False)
 
         line = ''
         for s in args:
@@ -788,7 +782,7 @@ class IndentedPrinter(object):
     # ====================================
 
 
-    def troubleshoot(self, troubleshoot = False):
+    def troubleshoot(self, troubleshoot=False):
         self._trouble_flag = troubleshoot
 
     def _trouble_print(self):
@@ -809,7 +803,7 @@ class IndentedPrinter(object):
 
     @property
     def _flagger(self):
-        if self._flag_manager == None:
+        if self._flag_manager is None:
             self._flag_manager = Flagger()
         return self._flag_manager
 
@@ -910,10 +904,10 @@ class IndentedPrinter(object):
     def c(self):
         return self.get_counter()
 
-    def p(self, *args , **kwargs):
+    def p(self, *args, **kwargs):
         return self.print(*args, **kwargs)
 
-    def pl(self, *args , **kwargs):
+    def pl(self, *args, **kwargs):
         return self.println(*args, **kwargs)
 
     def ks(self, key, *args, **kwargs):

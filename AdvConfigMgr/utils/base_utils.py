@@ -218,7 +218,7 @@ class Path(object):
             if inc_item:
                 tmp_ret += self.item
                 # if full:
-                #     tmp_ret += key_sep
+                # tmp_ret += key_sep
         return tmp_ret
 
 
@@ -846,7 +846,7 @@ def quarter_calc(*args):
         if arg[0] % 1 == 0:
             qtr = arg[0] % 4
             yr = 2000 + ( ( arg[0] - qtr ) / 4 )
-            qtr = qtr + 1
+            qtr += 1
             response_item['year'] = yr
             response_item['quarter'] = qtr
             response_item['word'] = '{year}-Q{quarter}'.format(**response_item)
@@ -969,7 +969,6 @@ class DBList(object):
     def __init__(self,
                  starting_list,
                  dict_key):
-
         for item in starting_list:
             self.internal_dict[item[dict_key]] = item
 
@@ -1649,7 +1648,7 @@ def replace_between(instring, start_key, end_key, replace, keep_keys=False, offs
             outstring = outstring + instring[curs_pos:start_pos] + replace
             curs_pos = end_pos + end_key_len
 
-        found = found + 1
+        found += 1
 
         start_pos = instring.find(start_key, curs_pos)
 
@@ -1816,6 +1815,7 @@ def slugify(text, delim='_', case='lower', allowed=None, punct_replace='', encod
     else:
         return text_out
 
+
 # ===============================================================================
 # Format number as clean string
 # ===============================================================================
@@ -1954,6 +1954,7 @@ def concat(*args, separator=' ', trim_items=True):
     return tmp_str
     '''
 
+
 # ===============================================================================
 # Tree dictionary
 # ===============================================================================
@@ -1979,7 +1980,7 @@ class TreeItem():
 class TreeDict():
     _root_dict = {}
     _root_node = TreeItem(key='root'
-    )
+                          )
 
     def __init__(self,
                  initial_list,
@@ -2016,7 +2017,7 @@ class TreeDict():
                                                                      parent=parent_node,
                                                                      children={},
                                                                      item=node_dict,
-        )
+                                                                     )
 
     def add_list(self, list_in):
         for item in list_in:

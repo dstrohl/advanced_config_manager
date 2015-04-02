@@ -2,7 +2,11 @@ Migration of Versions
 =====================
 
 The system can help with migrating the data between versions.  To handle migrations, first create a migration definition
-dictionary.
+dictionary. and pass it to the migration manager during section initialization.
+
+Migrations are handled on a section by section basis, and are performed when running a read operation from a storage
+manager (other than the cli manager)  So be aware that in a multi-storage environment,
+
 
 
 This dictionary could have the following keys:
@@ -10,6 +14,8 @@ This dictionary could have the following keys:
 +---------------------+----------------+-----------------------------------------------------------------------------------+
 | Key Name            |Data Type       | Description                                                                       |
 +=====================+================+===================================================================================+
+| section_name        | str            | The name of the section to be used.  can be omited only if a simple config is used|
++---------------------+----------------+-----------------------------------------------------------------------------------+
 | stored_version_min  | str            | The version of the stored data to convert from, this requires at least one of the |
 +---------------------+----------------+ version entries, and could have all three defined.                                +
 | stored_version_max  | str            |                                                                                   |

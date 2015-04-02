@@ -1,6 +1,5 @@
 __author__ = 'dstrohl'
 
-
 import warnings
 from AdvConfigMgr.utils import IndentedPrinter
 
@@ -20,6 +19,7 @@ class Error(Exception):
 
     __str__ = __repr__
 
+
 class SimpleConfigError(Error):
     """Raised when section actions are attempted on a simple config."""
 
@@ -36,6 +36,7 @@ class NoSectionError(Error):
         Error.__init__(self, 'No section: %r' % (section,))
         self.section = section
         self.args = (section, )
+
 
 class NoStorageManagerError(Error):
     """Raised when no storage manager matches a requested tag."""
@@ -56,7 +57,7 @@ class LockedSectionError(Error):
 class ForbiddenActionError(Error):
     """Raised when an action is disallowed due to configuration."""
 
-    def __init__(self, forbidden_action_string ):
+    def __init__(self, forbidden_action_string):
         Error.__init__(self, 'Forbidden action: %s' % forbidden_action_string)
 
 
@@ -87,10 +88,10 @@ class DuplicateSectionError(Error):
 
 
 class DuplicateCLIOptionError(Error):
-
     def __init__(self, option, cli_arg):
         msg = '%s from option %s already exists' % option, cli_arg
         Error.__init__(self, msg)
+
 
 class DuplicateOptionError(Error):
     """Raised by strict parsers when an option is repeated in an input source.
@@ -129,6 +130,7 @@ class NoOptionError(Error):
         self.section = section
         self.args = (option, section)
 
+
 class EmptyOptionError(Error):
     """A requested option was found but did not have a value or default value."""
 
@@ -138,7 +140,6 @@ class EmptyOptionError(Error):
         self.option = option
         self.section = section
         self.args = (option, section)
-
 
 
 class ParsingError(Error):

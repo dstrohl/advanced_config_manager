@@ -170,7 +170,8 @@ class PathHandler(object):
         file.close()
         return open(tmp_file, mode=mode, encoding=self._default_open_encoding)
 
-    def _get_correct_type(self, path, ret_type=None, force_readable=False, force_writable=False, force_mode=None, encoding=None):
+    def _get_correct_type(self, path, ret_type=None, force_readable=False, force_writable=False, force_mode=None,
+                          encoding=None):
 
         if ret_type is None:
             ret_type = self._return_type

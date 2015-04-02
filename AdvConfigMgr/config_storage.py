@@ -1,7 +1,7 @@
 __author__ = 'dstrohl'
 
 from AdvConfigMgr.config_exceptions import *
-from AdvConfigMgr.config_types import _UNSET
+# from AdvConfigMgr.config_types import _UNSET
 from AdvConfigMgr.utils import make_list, merge_dictionaries
 from AdvConfigMgr.utils.filehandler import PathHandler
 from argparse import ArgumentParser
@@ -43,7 +43,7 @@ class BaseConfigStorageManager(object):
 
     """
 
-     #: TODO Add Record Based Storage
+    #: TODO Add Record Based Storage
 
     storage_type_name = 'Base'
     storage_name = None
@@ -72,7 +72,7 @@ class BaseConfigStorageManager(object):
         :param int priority: the priority of this manager, with smallest being run earlier than larger.
         :return:
         """
-        self.manager = None   # this is set during registration.
+        self.manager = None  # this is set during registration.
 
         self.storage_name = storage_name or self.storage_name
         self.allow_create = allow_create or self.allow_create
@@ -86,7 +86,6 @@ class BaseConfigStorageManager(object):
 
         self.last_section_count = 0
         self.last_option_count = 0
-
 
         self.data = None
 
@@ -296,6 +295,10 @@ class BaseConfigStorageManager(object):
         for section, options in dict_in.items():
             if self._ok_to_read_section(section, storage_name):
                 self.last_section_count += 1
+
+                storage_version = options.get(self.manager[section].version_option_name, None)
+                options = self.manager[section].migrate_dict(storage_version, options)
+
                 for option, value in options.items():
                     sav_suc = self._set_option(section, option, value)
                     if sav_suc:
@@ -342,7 +345,7 @@ class BaseConfigStorageManager(object):
         return saved
 
     def __repr__(self):
-        return self.storage_type_name+' ['+self.storage_name+']'
+        return self.storage_type_name + ' [' + self.storage_name + ']'
 
 
 class ConfigCLIStorage(BaseConfigStorageManager):
@@ -351,11 +354,11 @@ class ConfigCLIStorage(BaseConfigStorageManager):
     """
     storage_type_name = 'CLI Manager'
     storage_name = 'cli'
-    standard = True             #: True if this should be used for read_all/write_all ops
-    force_strings = False       #: True if the storage only accepts strings
-    force = True               #: True if this will set options even if they are locked
-    overwrite = True           #: True if this will overwrite options that have existing values
-    lock_after_read = True     #: True if this will lock the option after reading
+    standard = True  #: True if this should be used for read_all/write_all ops
+    force_strings = False  #: True if the storage only accepts strings
+    force = True  #: True if this will set options even if they are locked
+    overwrite = True  #: True if this will overwrite options that have existing values
+    lock_after_read = True  #: True if this will lock the option after reading
     priority = 1
 
     def __init__(self, *args, **kwargs):
@@ -435,7 +438,7 @@ class ConfigSimpleDictStorage(BaseConfigStorageManager):
     """
     storage_type_name = 'Simple Dictionary Storage'
     storage_name = 'dict'
-    standard = False             #: True if this should be used for read_all/write_all ops
+    standard = False  #: True if this should be used for read_all/write_all ops
 
     def __init__(self, *args, **kwargs):
         super(ConfigSimpleDictStorage, self).__init__(*args, **kwargs)
@@ -608,7 +611,6 @@ class StorageManagerManager(object):
             ip.debug('making a list...').a()
             ip.debug('registered storages: ', self.tag_dict)
             for t in storage_names:
-
                 ip.debug('adding: ', self.tag_dict[t].storage_name)
 
                 tmp_d = self.get(t)
@@ -661,8 +663,8 @@ class ConfigStringStorage(BaseConfigStorageManager):
     """
 
     storage_type_name = 'INI String'
-    storage_name = 'string'          #: the internal name of the storage manager, must be unique
-    force_strings = True       #: True if the storage only accepts strings
+    storage_name = 'string'  #: the internal name of the storage manager, must be unique
+    force_strings = True  #: True if the storage only accepts strings
 
     # Regular expressions for parsing section headers and options
     _SECT_TMPL = r"""
@@ -800,7 +802,7 @@ class ConfigStringStorage(BaseConfigStorageManager):
                     index = line.find(prefix)
                     if index == -1:
                         continue
-                    if index == 0 or (index > 0 and line[index-1].isspace()):
+                    if index == 0 or (index > 0 and line[index - 1].isspace()):
                         inline_pos.append(index)
                 comment_start = min(inline_pos)
 
@@ -821,7 +823,7 @@ class ConfigStringStorage(BaseConfigStorageManager):
             cur_indent_level = first_nonspace.start() if first_nonspace else 0
 
             if (cursect is not None and optname and
-                    cur_indent_level > indent_level):
+                        cur_indent_level > indent_level):
 
                 cursect[optname].append(value)
 
@@ -962,7 +964,7 @@ class ConfigFileStorage(ConfigStringStorage):
     """
 
     storage_type_name = 'INI File'
-    storage_name = 'txt'          #: the internal name of the storage manager, must be unique
+    storage_name = 'txt'  #: the internal name of the storage manager, must be unique
 
     def __init__(self, *,
                  delimiters=('=', ':'),
@@ -1130,7 +1132,7 @@ class ConfigFileStorage(ConfigStringStorage):
 
         # if the path needs a number, test for it.
         if '*' in backup_filename:
-            num_key = '{:0'+str(len(str(self._max_backup_num)))+'}'
+            num_key = '{:0' + str(len(str(self._max_backup_num))) + '}'
             backup_filename = backup_filename.replace('*', num_key)
 
             for n in range(self._max_backup_num):
@@ -1169,11 +1171,11 @@ class ConfigFileStorage(ConfigStringStorage):
                 raise FileNotFoundError()
 
         if exists and self._make_backup_before_writing:
+            # noinspection PyUnboundLocalVariable
             self._make_backup(filename.name)
 
         if file is None:
             file = filename.open(mode='w', encoding=encoding)
-
 
         for l in self.data:
             file.write(l)
@@ -1181,6 +1183,7 @@ class ConfigFileStorage(ConfigStringStorage):
         file.close()
 
         return self.last_section_count, self.last_option_count
+
     '''
     def _join_multiline_value(self, val):
         if isinstance(val, list):

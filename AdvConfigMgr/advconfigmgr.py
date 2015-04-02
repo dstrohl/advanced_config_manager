@@ -124,7 +124,7 @@ from AdvConfigMgr.config_exceptions import *
 from AdvConfigMgr.config_interpolation import Interpolation, NoInterpolation
 from AdvConfigMgr.config_types import *
 from AdvConfigMgr.config_storage import *
-
+from AdvConfigMgr.config_migrate import ConfigMigrationManager
 
 from collections import OrderedDict as _default_dict, ChainMap as _ChainMap
 from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slugify, get_after, get_before
@@ -223,8 +223,7 @@ class ConfigOption(object):
             raise NoOptionError(self.name, self.section.name)
 
         if self.cli_options is not None:
-            cli_args = {}
-            cli_args['dest'] = self.name
+            cli_args = {'dest': self.name}
             if self.description is not None:
                 cli_args['help'] = self.description
 
@@ -246,7 +245,7 @@ class ConfigOption(object):
             tmp_flags = []
             for f in make_list(cli_args['flags']):
                 if f[0] != '-':
-                    tmp_flags.append('-'+f)
+                    tmp_flags.append('-' + f)
                 else:
                     tmp_flags.append(f)
             cli_args['flags'] = tmp_flags
@@ -269,7 +268,7 @@ class ConfigOption(object):
 
     @property
     def path(self):
-        return self.section.name+'.'+self.name
+        return self.section.name + '.' + self.name
 
     def validated(self, value):
         return self._datatype_manager(value)
@@ -420,8 +419,8 @@ class ConfigOption(object):
             if not self.do_not_change or force:
 
                 if self.has_default_value and value == self.default_value:
-                        self.clear()
-                        ip.debug('set option [', self.path, '], to default value [', value, ']')
+                    self.clear()
+                    ip.debug('set option [', self.path, '], to default value [', value, ']')
 
                 if validate:
                     self.validated(value)
@@ -512,6 +511,7 @@ class ConfigSection(object):
     """
     A single section of a config
     """
+
     def __init__(self, manager, name,
                  verbose_name=None,
                  description=None,
@@ -526,7 +526,8 @@ class ConfigSection(object):
                  cli_section_title=None,
                  cli_section_desc=None,
                  version=None,
-                 version_option_name=None):
+                 version_option_name=None,
+                 version_migrations=None):
         """
         :param ConfigManager manager: A pointer to the config manager
         :param str name: The name of the section
@@ -535,9 +536,9 @@ class ConfigSection(object):
         :param str storage_write_to: The tag of the storage location to save to, if None, the section will be saved to
             the default location, if '-' it will not be saved in save_all operations, if "*", section will be saved to
             all configured storage locations. Sections can be saved manually to any storage if needed.
-        :param str or list storage_read_from_only: options from storage with tags in this list will be read.  If None (default)
-            then options in storage will be always be used.  This allows restricting options to specific storage
-            locations.
+        :param str or list storage_read_from_only: options from storage with tags in this list will be read.  If None
+            (default) then options in storage will be always be used.  This allows restricting options to specific
+            storage locations.
             CLI options, if configured, will always overwrite data from storage.
         :param bool store_default: store defaults in storage medium
         :param bool locked: if True, do not allow any changes to the section
@@ -609,9 +610,16 @@ class ConfigSection(object):
 
             self.add(tmp_version_dict)
 
+        if version_migrations is not None and version_migrations:
+            self._migrations = ConfigMigrationManager(self, version_migrations)
+        else:
+            self._migrations = None
 
-
-
+    def migrate_dict(self, storage_version, section_dict):
+        if self._migrations is None:
+            return section_dict
+        else:
+            return self._migrations.migrate_section(storage_version, section_dict)
 
     @property
     def section_ok_after_load(self):
@@ -865,7 +873,7 @@ class ConfigSection(object):
             kwargs['datatype'] = value.__class__.__name__
 
             self._add(name, *args, force_load=True, **kwargs)
-            
+
         self.set(name, value)
 
     @property
@@ -938,9 +946,7 @@ class ConfigSection(object):
                 elif isinstance(arg, (list, tuple)):
                     for a in arg:
                         if isinstance(a, (list, tuple)):
-                            tmp_arg = {}
-                            tmp_arg['name'] = a[0]
-                            tmp_arg['default_value'] = a[1]
+                            tmp_arg = {'name': a[0], 'default_value': a[1]}
                             tmp_options.append(tmp_arg)
                         else:
                             tmp_options.append(a)
@@ -1032,7 +1038,6 @@ class ConfigSection(object):
 
 
 class ConfigManager(object):
-
     # Interpolation algorithm to be used if the user does not specify another
     _DEFAULT_INTERPOLATION = Interpolation()
     _DEFAULT_SECT_NAME = "__DEFAULT__"
@@ -1066,6 +1071,7 @@ class ConfigManager(object):
                  version_allow_unversioned=True,
                  version_enforce_versioning=False,
                  version_disable_cross_section_copy=False,
+                 version_migrations=None,
                  **kwargs
                  ):
         """
@@ -1103,9 +1109,11 @@ class ConfigManager(object):
             section or base level.
         :param bool version_disable_cross_section_copy:  if True, cross section copy will not work.  Used when you have
             plugins from different authors and you want to segment them.
+        :param list version_make_migrations: this is a list of migrations that can be performed, (see :doc:`migration`\ )
         :param kwargs: if "no_sections" is set, all section options can be passed to the ConfigManager object.
         """
 
+        self.last_fail_list = []
         self._name = name
         self._dict = _default_dict
         self._sections = self._dict()
@@ -1175,6 +1183,11 @@ class ConfigManager(object):
         if self._no_sections:
             self.add_section(self._DEFAULT_SECT_NAME, force_add_default=True, **kwargs)
 
+        if version_migrations is None:
+            self._migrations = []
+        else:
+            self._migrations = version_migrations
+
     @property
     def version(self):
         return self._version
@@ -1187,12 +1200,19 @@ class ConfigManager(object):
         """Return a list of section names"""
         return list(self._sections.keys())
 
+    def get_sec_migrations(self, section):
+        tmp_ret = []
+        for m in self._migrations:
+            tmp_section = self.sectionxform(m['section_name'])
+            if tmp_section == section:
+                tmp_ret.append(m)
+        return tmp_ret
+
     @property
     def config_ok_after_load(self):
-        self.last_fail_list = []
         for s in self:
             if not s.section_ok_after_load:
-                tmp_name = s.name+'.'+'/'.join(s.last_failure_list)
+                tmp_name = s.name + '.' + '/'.join(s.last_failure_list)
                 self.last_fail_list.append(tmp_name)
                 return False
         return True
@@ -1206,10 +1226,10 @@ class ConfigManager(object):
         if self._no_sections and not force_add_default:
             raise SimpleConfigError(section)
 
-
         section = self.sectionxform(section)
 
         options = kwargs.pop('options', None)
+        kwargs['version_migrations'] = self.get_sec_migrations(section)
 
         if section in self._sections:
             raise DuplicateSectionError(section)
@@ -1518,4 +1538,4 @@ class ConfigManager(object):
     def _convert_to_boolean(value):
         return convert_to_boolean(value)
 
-    # removed
+        # removed
