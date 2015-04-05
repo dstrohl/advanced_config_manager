@@ -1,12 +1,13 @@
 __author__ = 'dstrohl'
 __all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataTypeDict',
-           'DataTypeGenerator', 'data_type_generator', '_UNSET']
+           'DataTypeGenerator', 'data_type_generator', '_UNSET', 'Xform', 'ItemKey']
 
 
 import ast
 import copy
-from AdvConfigMgr.utils import make_list, convert_to_boolean
+from AdvConfigMgr.utils import make_list, convert_to_boolean, slugify, get_after, get_before
 from AdvConfigMgr.config_validation import ValidationError
+from unicodedata import normalize
 
 
 class UnSet(object):
@@ -30,6 +31,187 @@ class UnSet(object):
 
 
 _UNSET = UnSet()
+
+
+class ItemKey(object):
+    _sec_opt_sep = '.'
+    _def_glob_chars = '*?[]!'
+    _def_no_glob_chars = '_'
+
+    def __init__(self, name=None, **kwargs):
+
+        self._section = None
+        self._sect_compare = None
+        self._option = None
+        self._dot = False
+        self._xform_class = Xform()
+        glob = kwargs.pop('glob', None)
+        if glob:
+            self._glob_chars = self._def_glob_chars
+        else:
+            self._glob_chars = self._def_no_glob_chars
+
+        self._save_and_xform(name=name, **kwargs)
+
+    def _set_sec(self, section):
+        self._section = self._xform_class.section(section, self._glob_chars)
+
+    def _set_opt(self, option):
+        self._option = self._xform_class.option(option, self._glob_chars)
+        self._sect_compare = self._xform_class.section(option, self._glob_chars)
+
+    def _save_dot_not(self, name):
+        if self._sec_opt_sep is not None and self._sec_opt_sep in name:
+            self._set_sec(get_before(name, self._sec_opt_sep))
+            self._set_opt(get_after(name, self._sec_opt_sep))
+            self._dot = True
+            return None
+        if self._sec_opt_sep is None and self._sec_opt_sep in name:
+            msg = 'Dot Notation disabled : {}'.format(name)
+            raise AttributeError(msg)
+        return name
+
+    def _save_and_xform(self, name=None, **kwargs):
+
+        name = kwargs.get('name', name)
+        if name is not None:
+            if type(name) == type(self):
+                self._section = name.section
+                self._option = name.option
+                self._sect_compare = name._sect_compare
+
+            elif isinstance(name, str):
+                if self._save_dot_not(name) is not None:
+                    self._set_sec(name)
+                    self._set_opt(name)
+
+        if 'section' in kwargs:
+            section = kwargs['section']
+
+            if isinstance(section, str):
+                if self._save_dot_not(section) is not None:
+                    self._set_sec(section)
+            elif type(section) == type(self):
+                self._section = name.section
+            else:
+                self._section = section
+
+        if 'option' in kwargs:
+            option = kwargs['option']
+
+            if isinstance(option, str):
+                if self._save_dot_not(option) is not None:
+                    self._set_opt(option)
+            elif type(option) == type(self):
+                self._option = name.option
+            else:
+                self._option = option
+
+        return self
+
+    @property
+    def section(self):
+        return self._section
+
+    @property
+    def option(self):
+        return self._option
+
+    @property
+    def s(self):
+        return self._section
+
+    @property
+    def o(self):
+        return self._option
+
+    @property
+    def has_both(self):
+        return self._section == self._sect_compare
+
+    def __str__(self):
+        if self._section == self._sect_compare:
+            return self.s
+        else:
+            return '{}{}{}'.format(self.s, self._sec_opt_sep, self.o)
+
+    def __call__(self, name=None, **kwargs):
+        return self._save_and_xform(name, **kwargs)
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return str(self) == other
+        elif type(other) == type(self):
+            return str(self) == str(other)
+
+    def __repr__(self):
+        return str(self)
+
+
+
+class Xform(object):
+
+    def option(self, optionstr, extra_allowed='_'):
+        """
+        Will transform the option name string as needed, by default this will slugify and lowercase the string.
+
+        This can be overridden as desired.
+        """
+        return self.slugify(optionstr, extra_allowed, 'lower', punct_replace='_')
+
+    def section(self, sectionstr, extra_allowed='_'):
+        """
+        Will transform the section name string as needed, by default this will slugify and uppercase the string.
+
+        This can be overridden as desired.
+        """
+        return self.slugify(sectionstr, extra_allowed, 'upper', punct_replace='_')
+
+    @staticmethod
+    def slugify(text, delim='_', case='lower', allowed=None, punct_replace='', encode=None):
+        """
+        generates a simpler text string.
+
+        :param text:
+        :param delim: a string used to delimit words
+        :param case: ['lower'/'upper'/'no_change']
+        :param allowed: a string of characters allowed that will not be replaced.  (other than normal alpha-numeric which
+            are never replaced.
+        :param punct_replace: a string used to replace punction characters, if '', the characters will be deleted.
+        :param encode: Will encode the result in this format.
+        :return:
+        """
+
+        if text is None or not isinstance(text, str):
+            return text
+
+        punct = '[\t!"#$%&\'()*\-/<=>?@\[\\\]^_`{|},.]+'
+        if allowed is not None:
+            for c in allowed:
+                punct = punct.replace(c, '')
+
+        result = []
+
+        for word in text.split():
+            word = normalize('NFKD', word)
+            for c in punct:
+                word = word.replace(c, punct_replace)
+            result.append(word)
+
+        delim = str(delim)
+        # print('sluggify results: ', result)
+        text_out = delim.join(result)
+
+        if encode is not None:
+            text_out.encode(encode, 'ignore')
+
+        if case == 'lower':
+            return text_out.lower()
+        elif case == 'upper':
+            return text_out.upper()
+        else:
+            return text_out
+
 
 
 class DataTypeGenerator(object):

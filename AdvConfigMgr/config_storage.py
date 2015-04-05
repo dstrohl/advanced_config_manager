@@ -1,7 +1,6 @@
 __author__ = 'dstrohl'
 
 from AdvConfigMgr.config_exceptions import *
-# from AdvConfigMgr.config_types import _UNSET
 from AdvConfigMgr.utils import make_list, merge_dictionaries
 from AdvConfigMgr.utils.filehandler import PathHandler
 from argparse import ArgumentParser
@@ -13,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 
 __all__ = ['BaseConfigStorageManager', 'StorageManagerManager', 'ConfigCLIStorage', 'ConfigSimpleDictStorage',
-           'ConfigFileStorage']
+           'ConfigFileStorage', 'ConfigStringStorage','BaseConfigRecordBasedStorageManager']
 
 
 class BaseConfigStorageManager(object):
@@ -43,15 +42,13 @@ class BaseConfigStorageManager(object):
 
     """
 
-    #: TODO Add Record Based Storage
-
     storage_type_name = 'Base'
     storage_name = None
     force_strings = False
     standard = True
-    allow_create = False
+    allow_create = True
     force = False
-    overwrite = False
+    overwrite = True
     lock_after_read = False
 
     def __init__(self,
@@ -141,8 +138,8 @@ class BaseConfigStorageManager(object):
         raise NotImplementedError
 
     @property
-    def _am_i_default(self):
-        return self.manager.storage.default_manager is self
+    def is_default(self):
+        return self.manager.storage.default_manager.storage_name == self.storage_name
 
     def _ok_to_read_section(self, section_name, storage_name=storage_name):
         if section_name not in self.manager:
@@ -154,7 +151,7 @@ class BaseConfigStorageManager(object):
         if storage_name == '*':
             return True
 
-        tmp_section_tag = self.manager[section_name].storage_read_from
+        tmp_section_tag = self.manager[section_name].storage_read_from_only
 
         if tmp_section_tag is None:
             return True
@@ -162,14 +159,17 @@ class BaseConfigStorageManager(object):
             return True
         return False
 
-    def _ok_to_write_section(self, section_name, storage_name=storage_name):
+    def _ok_to_write_section(self, section_name, storage_name=None):
+
+        if storage_name is None:
+            storage_name = self.storage_name
 
         if storage_name == '*':
             return True
 
         tmp_section_tag = self.manager[section_name].storage_write_to
         if tmp_section_tag is None:
-            if self._am_i_default:
+            if self.is_default:
                 return True
             else:
                 return False
@@ -203,7 +203,10 @@ class BaseConfigStorageManager(object):
         else:
             self._flat_dict = False
 
-        section_name = make_list(section_name)
+        if section_name is None:
+            section_name = self.manager.sections
+        else:
+            section_name = make_list(section_name)
 
         ip.debug('section name parameter: ', section_name)
 
@@ -267,7 +270,7 @@ class BaseConfigStorageManager(object):
         ip.s()
         return get_rec, tmp_ret
 
-    def _save_dict(self, dict_in, section_name=None, storage_name=storage_name):
+    def _save_dict(self, dict_in, section_name=None, storage_name=None):
         """
         Takes a dictionary and saves it to the system
 
@@ -276,33 +279,46 @@ class BaseConfigStorageManager(object):
             should be a dictionary of options.  otherwise this should be a dictionary of sections, each a dictionary
             of options.
         :param section_name: a string name of a section or list of section names to save to.  if this is a single
-            string, it is assumed it is the base of the dictionary and all keys are options, if this is None or if it
-            is a tuple/list, it is assumed that the keys of the dictionary are sections, containing dictionaries of
-            options
+            string, it is assumed it is the base of the dictionary and all keys are options, if this is None, all of the
+            sections in the dict will be processed, if it is a tuple/list, then only the sections in the dict that
+            match items in the section_name will be processed.
             This does not override the storage names.
         :type section_name: str or list or None
         :param str storage_name: allows overriding the storage name
         """
+
+        if storage_name is None:
+            storage_name = self.storage_name
+
         self.last_section_count = 0
         self.last_option_count = 0
+        self.processed_sections = []   # used by the record type storage manager.
 
-        if self.manager.no_sections:
+        if self.manager._no_sections:
             section_name = self.manager._DEFAULT_SECT_NAME
 
         if isinstance(section_name, str):
             dict_in = {section_name: dict_in}
 
+        if section_name is not None:
+            section_name = make_list(section_name)
+        else:
+            section_name = self.manager.sections
+
         for section, options in dict_in.items():
-            if self._ok_to_read_section(section, storage_name):
-                self.last_section_count += 1
+            section = self.manager.sectionxform(section)
+            if section in section_name:
+                if self._ok_to_read_section(section, storage_name):
+                    self.processed_sections.append(section)
+                    self.last_section_count += 1
 
-                storage_version = options.get(self.manager[section].version_option_name, None)
-                options = self.manager[section].migrate_dict(storage_version, options)
+                    storage_version = options.get(self.manager[section].version_option_name, None)
+                    options = self.manager[section].migrate_dict(storage_version, options)
 
-                for option, value in options.items():
-                    sav_suc = self._set_option(section, option, value)
-                    if sav_suc:
-                        self.last_option_count += 1
+                    for option, value in options.items():
+                        sav_suc = self._set_option(section, option, value)
+                        if sav_suc:
+                            self.last_option_count += 1
 
     def _set_option(self, section_name, option_name, value):
         """
@@ -346,6 +362,32 @@ class BaseConfigStorageManager(object):
 
     def __repr__(self):
         return self.storage_type_name + ' [' + self.storage_name + ']'
+
+
+class BaseConfigRecordBasedStorageManager(BaseConfigStorageManager):
+    """
+    This base method is intended to be used for record based storage managers, when saving options to the system,
+    this will also poll the deleted records list and remove them from the database.
+    """
+    def _save_dict(self, dict_in, section_name=None, storage_name=None):
+        self.processed_sections = []
+
+        super(BaseConfigRecordBasedStorageManager, self)._save_dict(dict_in=dict_in,
+                                                                    section_name=section_name,
+                                                                    storage_name=storage_name)
+
+        for section in self.processed_sections:
+            deleted_records = self.manager[section].migration.options_to_remove
+            for del_rec in deleted_records:
+                self.delete_record(section, del_rec)
+
+    def delete_record(self, section, option):
+        """
+        This must be implemented for records based storage managers,
+
+        This method takes a section and option, and deletes that record in the database.
+        """
+        raise NotImplementedError
 
 
 class ConfigCLIStorage(BaseConfigStorageManager):
@@ -469,7 +511,7 @@ class StorageManagerManager(object):
     A class to handle storage managers
     """
 
-    def __init__(self, config_manager, *managers, cli_parser_name='cli', cli_manager=None):
+    def __init__(self, config_manager, managers=None, cli_parser_name='cli', cli_manager=None):
         """
         :param config_manager: a link to the ConfigurationManager object
         :param managers: the managers to be registered.  The first manager passed will be imported as the default
@@ -482,10 +524,12 @@ class StorageManagerManager(object):
         self.default_manager = None
         set_as_default = True
 
-        if managers:
-            for a in managers:
-                self.register_storage(a, default=set_as_default)
-                set_as_default = False
+        if not isinstance(managers, (list, tuple)):
+            managers = [managers]
+
+        for a in managers:
+            self.register_storage(a, default=set_as_default)
+            set_as_default = False
 
         if cli_parser_name is not None:
             if cli_parser_name not in self:
@@ -494,7 +538,7 @@ class StorageManagerManager(object):
                 cli_manager.storage_name = cli_parser_name
                 self.register_storage(cli_manager)
 
-    def register_storage(self, storage_manager, default=True):
+    def register_storage(self, storage_manager, default=False):
         ip.debug('registering storage manager')
 
         storage_manager.manager = self.config_manager
@@ -585,7 +629,7 @@ class StorageManagerManager(object):
         ip.info('options: ', tmp_option_count)
         ip.info('managers: ', tmp_storage_manager_count).s()
 
-    def write(self, sections=None, storage_names=None, override_tags=False):
+    def write(self, sections=None, storage_names=None, override_tags=False, **kwargs):
         """
         runs the write to storage process for the selected or configured managers
 
@@ -625,8 +669,8 @@ class StorageManagerManager(object):
             else:
                 use_tag = s.storage_name
 
-            ip.debug('writing to to: ', s).a()
-            tsc, toc = s.write(sections, use_tag)
+            ip.debug('writing to : ', s).a()
+            tsc, toc = s.write(sections, use_tag, **kwargs)
             ip.s()
             tmp_section_count += tsc
             tmp_option_count += toc
@@ -807,11 +851,11 @@ class ConfigStringStorage(BaseConfigStorageManager):
                 comment_start = min(inline_pos)
 
             if comment_start == sys.maxsize:
-                value = line
+                value = line.strip()
             elif comment_start == 0:
                 value = None
             else:
-                value = line[:comment_start].rstrip()
+                value = line[:comment_start].strip()
 
             if not value:
                 # empty line marks end of value
@@ -888,41 +932,55 @@ class ConfigStringStorage(BaseConfigStorageManager):
         if e:
             raise e
 
+        for key, item in out_dict.items():
+            if self.manager._no_sections:
+                if isinstance(item, list):
+                    out_dict[key] = '\n'.join(item).rstrip()
+            else:
+                for option, value in item.items():
+                    if isinstance(value, list):
+                        out_dict[key][option] = '\n'.join(value).rstrip()
+
+
         return out_dict
 
     # ****************************************************************************************************
     # *** Write files section
     # ****************************************************************************************************
 
-    def _format_dict(self, sections, storage_name):
-        tmp_dict_to_save = self._get_dict(sections, storage_name)
+    def _dict_to_list(self, dict_in, new_line=True):
 
         tmp_list = []
         if self._flat_dict:
-            tmp_list.extend(self._format_section(tmp_dict_to_save, 'DEFAULT'))
+            tmp_list.extend(self._format_section(dict_in, 'DEFAULT'))
         else:
-            for k, s in tmp_dict_to_save.items():
-                tmp_list.extend(self._format_section(s, k))
+            for k, s in dict_in.items():
+                tmp_list.extend(self._format_section(s, k, new_line))
 
         return tmp_list
 
-    def _format_section(self, option_dict, section_name):
+    def _format_section(self, option_dict, section_name, new_line):
 
         tmp_ret = []
+        if new_line:
+            line_end = '\n'
+        else:
+            line_end = ''
 
         if self._space_around_delimiters:
             delimiter = " {} ".format(self._delimiters[0])
         else:
             delimiter = self._delimiters[0]
 
-        tmp_ret.append("[{}]\n".format(section_name))
-        for key, value in option_dict:
+        tmp_ret.append("[{}]{}".format(section_name, line_end))
+        for key, value in option_dict.items():
             if value is not None:
                 value = delimiter + str(value).replace('\n', '\n\t')
             else:
                 value = ""
-            tmp_ret.append("{}{}\n".format(key, value))
-        tmp_ret.append("\n")
+            tmp_ret.append("{}{}{}".format(key, value, line_end))
+        if new_line:
+            tmp_ret.append(line_end)
         return tmp_ret
 
     def write(self, section_name=None, storage_name=storage_name, **kwargs):
@@ -930,22 +988,17 @@ class ConfigStringStorage(BaseConfigStorageManager):
         will write to an INI file.
         """
         self.data = None
-        self.data = self._format_dict(section_name=section_name, storage_name=storage_name)
+        tmp_dict_to_save = self._get_dict(section_name=section_name, storage_name=storage_name)
+        self.data = self._dict_to_list(tmp_dict_to_save, False)
 
         return self.last_section_count, self.last_option_count
 
-    '''
-    def _join_multiline_value(self, val):
-        if isinstance(val, list):
-            val = '\n'.join(val).rstrip()
-        return val
 
     def _handle_error(self, exc, fpname, lineno, line):
         if not exc:
             exc = ParsingError(fpname)
         exc.append(lineno, repr(line))
         return exc
-    '''
 
 
 class ConfigFileStorage(ConfigStringStorage):
@@ -964,7 +1017,7 @@ class ConfigFileStorage(ConfigStringStorage):
     """
 
     storage_type_name = 'INI File'
-    storage_name = 'txt'  #: the internal name of the storage manager, must be unique
+    storage_name = 'file'  #: the internal name of the storage manager, must be unique
 
     def __init__(self, *,
                  delimiters=('=', ':'),
@@ -975,6 +1028,7 @@ class ConfigFileStorage(ConfigStringStorage):
                  read_filenames=None,
                  read_path_order='alpha',
                  read_path_order_dir='asc',
+                 filename=None,
                  write_filename=None,
                  # leave_open=False,
                  create_files=True,
@@ -1002,7 +1056,9 @@ class ConfigFileStorage(ConfigStringStorage):
             ['myfile.ini', 'myotherfile.ini', 'backup_files/myfile_??.ini']
             The filename to read from can also be passed during the read operation.
         :type read_filenames: str or list
-        :type read_path_order: 'alpha' (default) or 'date', the order files will be processed if a path is passed.
+        :param read_path_order: 'alpha' (default) or 'date', the order files will be processed if a path is passed.
+        :param str filename: If used, the single file to read and write to. (cannot be used with read_filenames
+            write_filename.)
         :param write_filename: the filename to write files to.
             if None and read_filenames is passed, this will take the first name in the list.
             if None and read_paths is passed, AND if there is ONLY ONE file in the path that matches the filter,
@@ -1045,10 +1101,16 @@ class ConfigFileStorage(ConfigStringStorage):
         self._fail_if_no_file = fail_if_no_file
 
         # self._files = None
-        self._read_filenames = make_list(read_filenames)
-        self._read_path_order = read_path_order
-        self._read_path_order_dir = read_path_order_dir
-        self._write_filename = write_filename
+        if filename is not None:
+            self._read_filenames = make_list(filename)
+            self._read_path_order = read_path_order
+            self._read_path_order_dir = read_path_order_dir
+            self._write_filename = filename
+        else:
+            self._read_filenames = make_list(read_filenames)
+            self._read_path_order = read_path_order
+            self._read_path_order_dir = read_path_order_dir
+            self._write_filename = write_filename
 
         self._make_backup_before_writing = make_backup_before_writing
         self._backup_path = backup_path
@@ -1058,6 +1120,12 @@ class ConfigFileStorage(ConfigStringStorage):
         # self.filenames(filenames)
 
         super(ConfigFileStorage, self).__init__(**kwargs)
+
+    @property
+    def get_default_filename(self):
+        tmp_fn = Path(sys.argv[0])
+        return tmp_fn.with_suffix('.ini')
+
 
     def read(self, section_name=None, storage_name=storage_name, files=None, encoding=None, **kwargs):
         """
@@ -1087,6 +1155,9 @@ class ConfigFileStorage(ConfigStringStorage):
 
             if files is None:
                 files = self._read_filenames
+
+            if files is None:
+                files = self.get_default_filename
 
             files = make_list(files)
 
@@ -1153,13 +1224,16 @@ class ConfigFileStorage(ConfigStringStorage):
         """
         will write to an INI file.
         """
+
         self.data = None
-        self.data = self._format_dict(section_name, storage_name)
+        tmp_dict_to_save = self._get_dict(section_name=section_name, storage_name=storage_name)
+        self.data = self._dict_to_list(tmp_dict_to_save)
 
         exists = True
         if file is None:
             if self._write_filename is None:
-                raise AttributeError('either a file object or a filename must be specified')
+                filename = self.get_default_filename
+                exists = filename.exists()
             else:
                 filename = Path(self._write_filename)
 
@@ -1183,13 +1257,6 @@ class ConfigFileStorage(ConfigStringStorage):
         file.close()
 
         return self.last_section_count, self.last_option_count
-
-    '''
-    def _join_multiline_value(self, val):
-        if isinstance(val, list):
-            val = '\n'.join(val).rstrip()
-        return val
-    '''
 
     def _handle_error(self, exc, fpname, lineno, line):
         if not exc:

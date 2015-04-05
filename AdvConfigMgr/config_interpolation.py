@@ -14,6 +14,13 @@ class BaseInterpolation:
         self.enc = enc
         self.max_depth = max_depth
 
+    def interpolatorable(self, value):
+        key_str = self.key+self.enc[0]
+        if isinstance(value, str) and key_str in value:
+            return True
+        else:
+            return False
+
     def before_get(self, config_root, section_name, value):
         """
         run on value returned from the config_root before returning it to the calling system.
@@ -68,7 +75,9 @@ class BaseInterpolation:
 
 
 class NoInterpolation(BaseInterpolation):
-    pass
+
+    def interpolatorable(self, value):
+        return False
 
 
 class Interpolation(BaseInterpolation):

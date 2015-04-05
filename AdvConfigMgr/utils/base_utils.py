@@ -3,7 +3,7 @@ __author__ = 'dstrohl'
 A collection of simple(ish) functions and classes.
 """
 
-__all__ = ['args_handler', 'GenericMeta', 'DictKey2Method', 'AdvDict', 'DBList', 'UnSet',
+__all__ = ['args_handler', 'GenericMeta', 'DictKey2Method', 'AdvDict', 'DBList', 'UnSet', '_UNSET',
            'TreeDict', 'TreeItem', 'make_list', 'flatten', 'unpack_class_method', 'get_between', 'get_after',
            'get_before', 'get_not_in', 'get_same', 'get_meta_attrs', 'remove_dupes', 'list_in_list', 'list_not_in_list',
            'count_unique', 'index_of_count', 'ListPlus', 'LookupManager', 'is_iterable', 'is_string', 'Error', 'Path',
@@ -15,7 +15,6 @@ import sys
 import collections
 from string import Formatter
 from decimal import Decimal
-
 
 
 # ===============================================================================
@@ -276,9 +275,10 @@ def merge_dictionaries(*args, depth=0, max_depth=10):
         raise AttributeError('Merge dictionaries recussion depth max reached!')
 
     for arg in args:
-        if is_iterable(arg):
-            depth += 1
-            tmp_out_dict.update(merge_dictionaries(arg, depth))
+        if isinstance(arg, (list, tuple)):
+            for a in arg:
+                depth += 1
+                tmp_out_dict.update(merge_dictionaries(a, depth=depth, max_depth=max_depth))
 
         elif isinstance(arg, dict):
             tmp_out_dict.update(arg)

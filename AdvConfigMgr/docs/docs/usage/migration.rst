@@ -18,8 +18,8 @@ This dictionary could have the following keys:
 +---------------------+----------------+-----------------------------------------------------------------------------------+
 | stored_version_min  | str            | The version of the stored data to convert from, this requires at least one of the |
 +---------------------+----------------+ version entries, and could have all three defined.                                +
-| stored_version_max  | str            |                                                                                   |
-+---------------------+----------------+                                                                                   +
+| stored_version_max  | str            | If stored_version is None, (as oposed to omitted), this will be used to migrate   |
++---------------------+----------------+ from stored configs that do not have a version defined.                           +
 | stored_version      | str            |                                                                                   |
 +---------------------+----------------+-----------------------------------------------------------------------------------+
 | live_version_min    | str            | The version of the stored data to convert from, this requires at least one of the |

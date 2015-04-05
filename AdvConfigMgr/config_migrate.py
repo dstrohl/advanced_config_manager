@@ -1,7 +1,7 @@
 __author__ = 'dstrohl'
 
 from AdvConfigMgr.config_exceptions import Error
-from AdvConfigMgr.utils import VersionRange, slugify, interpolate
+from AdvConfigMgr.utils import VersionRange, slugify, interpolate, _UNSET, UnSet
 import copy
 from fnmatch import fnmatchcase
 
@@ -23,7 +23,7 @@ class ConfigMigrationManager(object):
         self._options_to_add = {}
 
         self.live_version = self.section.version
-        self.stored_version = None
+        self.stored_version = _UNSET
         self.current_migration = None
 
         for md in migration_dictionaries:
@@ -45,9 +45,14 @@ class ConfigMigrationManager(object):
         self.stored_version = version
         self.current_migration = None
         for m in self.migrations:
-            if version in m['stored_version_range'] and self.live_version in m['live_version_range']:
-                self.current_migration = m
-                return True
+            if self.stored_version is None:
+                if m['blank_stored_version'] and self.live_version in m['live_version_range']:
+                    self.current_migration = m
+                    return True
+            else:
+                if version in m['stored_version_range'] and self.live_version in m['live_version_range']:
+                    self.current_migration = m
+                    return True
         return False
 
     @property
@@ -98,16 +103,26 @@ class ConfigMigrationManager(object):
         return self.manager.optionxform(optionstr=option_name, extra_allowed='!*?[]')
 
     def _parse_migration(self, migration_dict):
+        tmp_stored_version = migration_dict.get('stored_version', _UNSET)
+
+        if tmp_stored_version is None:
+            blank_stored_version = True
+        elif tmp_stored_version is UnSet:
+            blank_stored_version = False
+            tmp_stored_version = None
+        else:
+            blank_stored_version = False
 
         tmp_md = {'stored_version_range': VersionRange(version_class=self.manager._version_class,
-                                                     sup_ver=migration_dict.get('stored_version', None),
-                                                     min_ver=migration_dict.get('stored_version_min', None),
-                                                     max_ver=migration_dict.get('stored_version_max', None)),
+                                                       sup_ver=tmp_stored_version,
+                                                       min_ver=migration_dict.get('stored_version_min', None),
+                                                       max_ver=migration_dict.get('stored_version_max', None)),
                   'live_version_range': VersionRange(version_class=self.manager._version_class,
-                                                   sup_ver=migration_dict.get('live_version', None),
-                                                   min_ver=migration_dict.get('live_version_min', None),
-                                                   max_ver=migration_dict.get('live_version_max', None)),
+                                                     sup_ver=migration_dict.get('live_version', None),
+                                                     min_ver=migration_dict.get('live_version_min', None),
+                                                     max_ver=migration_dict.get('live_version_max', None)),
                   'action_class': migration_dict.get('action_class', None),
+                  'blank_stored_version': blank_stored_version,
                   'actions': {},
                   'keep_only': migration_dict.get('keep_only', False)}
 

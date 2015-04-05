@@ -453,6 +453,7 @@ class TestConfigManager(unittest.TestCase):
 
 
     def test_simple_config(self):
+
         ip.si(False)
 
         c = ConfigManager(no_sections=True)
@@ -471,7 +472,11 @@ class TestConfigManager(unittest.TestCase):
         self.c['section2']['option2'] = 'test'
         self.c.storage.register_storage(ConfigSimpleDictStorage())
         tmp_dict = self.c.write(storage_names='dict')
-        tmp_ret_1 = {'SECTION_STD': {}, 'SECTION_DISALLOW_CREATE': {}, 'SECTION_LOCKED': {}, 'SECTION2': {'option2': 'test'}}
+        tmp_ret_1 = {'SECTION2': {'option2': 'test'}}
+
+        ip.si(False)
+        ip.debug('TMP_DICT   : ', tmp_dict)
+
         self.assertEqual(tmp_dict, tmp_ret_1)
 
     def test_dict_manager_save_default(self):
@@ -484,6 +489,32 @@ class TestConfigManager(unittest.TestCase):
         print(tmp_dict)
 
 
+    def test_seg_opt_sep(self):
+        c = ConfigManager()
+        c['section1.option1'] = 'test1'
+        c['section1']['option2'] = 'test2'
+        self.assertEqual(c['section1']['option1'], 'test1')
+        self.assertEqual(c['section1.option2'], 'test2')
+
+        c['section2'] = dict(description='hello world')
+        self.assertEqual(c['section2'].description, 'hello world')
+
+        with self.assertRaises(ValueError):
+            c['section3'] = 'testing'
+
+        with self.assertRaises(AttributeError):
+            c['section2'] = 'testing'
+
+
+        self.assertIn('section1.option1', c)
+        self.assertNotIn('section1.option4', c)
+
+
+    def test_debug(self):
+        c = ConfigManager()
+        c.add('section1')
+        c['section1']._debug_()
+        c._debug_()
 
 """
 Tests to run:
