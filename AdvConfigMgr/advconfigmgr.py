@@ -125,6 +125,9 @@ from AdvConfigMgr.config_interpolation import Interpolation, NoInterpolation
 from AdvConfigMgr.config_types import *
 from AdvConfigMgr.config_storage import *
 from AdvConfigMgr.config_migrate import ConfigMigrationManager
+from AdvConfigMgr.utils.unset import _UNSET
+from AdvConfigMgr.config_transform import Xform
+from AdvConfigMgr.config_ro_dict import ConfigRODict
 
 from collections import OrderedDict as _default_dict, ChainMap as _ChainMap
 from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slugify, get_after, get_before
@@ -137,263 +140,6 @@ __all__ = ["NoSectionError", "DuplicateOptionError", "DuplicateSectionError",
            "MissingSectionHeaderError",
            "ConfigParser", "SafeConfigParser", "RawConfigParser",
            "DEFAULTSECT", "MAX_INTERPOLATION_DEPTH"]
-
-
-class ConfigROSectionDict(object):
-
-    def __init__(self, base_dict, name, options=None):
-        """
-        :type base_dict: ConfigRODict
-        """
-        if options is None:
-            self._options_dict = {}
-        else:
-            self._options_dict = options
-
-        self._base_dict = base_dict
-        self.name = name
-
-    def _xform(self, option):
-        return self._base_dict._xform.option(option)
-
-    def _parsable(self, option):
-        return self._base_dict._parsable(option)
-
-    def _interpolatable(self, option):
-        option = self._xform(option)
-        if self._base_dict._interpolator is None:
-            return False
-        else:
-            tmp_opt = self[option]
-            return self._base_dict._interpolator.interpolatorable(tmp_opt)
-
-    @property
-    def _interpolated(self, option):
-        if self._interpolatable(option):
-            tmp_ret = self[option]
-
-            return tmp_ret
-        else:
-            return self._interpolator.before_get(self, section, value)
-
-
-        return self._base_dict._interpolate(self.name, tmp_ret)
-
-    def _interpolate(self, section, value):
-        if self._interpolator is None or not isinstance(value, str):
-            return value
-        else:
-            return self._interpolator.before_get(self, section, value)
-
-
-    def __getitem__(self, item):
-        if self._parsable(item):
-            return self._base_dict[item]
-        else:
-            item = self._xform(item)
-            try:
-                tmp_ret = self._options_dict[item]
-                return self._interpolate(self.name, tmp_ret)
-            except KeyError:
-                if self._base_dict._raise_on_get_not_exist:
-                    raise NoOptionError(option=item, section=self.name)
-
-    def __setitem__(self, option, value):
-        if self._parsable(option):
-            self._base_dict[option] = value
-        else:
-            option = self._xform(option)
-            if option in self:
-                self._options_dict[option] = value
-            else:
-                if self._base_dict.editable:
-                    self._options_dict[option] = value
-
-    def __iter__(self):
-        for key, item in self._options_dict.items():
-            yield item
-
-    def __contains__(self, option):
-        if self._parsable(option):
-            return option in self._base_dict
-        else:
-            option = self._xform(option)
-            return option in self._options_dict
-
-    def __delitem__(self, option):
-        if self._parsable(option):
-            del self._base_dict[option]
-        else:
-            option = self._xform(option)
-            if option in self and self._base_dict.editable:
-                del self._options_dict[option]
-
-
-class ConfigRODict(object):
-    _key_class = ItemKey()
-
-    def __init__(self, import_dict=None):
-        self._section_dict = {}
-        self._editable = False
-        self._interpolator = None
-        self._xform = Xform()
-        self._sec_opt_sep = '.'
-        self._raise_on_add_exist = False
-        self._raise_on_get_not_exist = True
-
-        if import_dict is not None:
-            self._editable = True
-            for name, section in import_dict.items():
-                self.item(name, option=None, value=section)
-            self._editable = False
-
-    '''
-    def _parsable(self, item):
-        if item is None:
-            return False
-        if self._sec_opt_sep is not None and self._sec_opt_sep in item:
-            return True
-        elif self._sec_opt_sep is None and self._sec_opt_sep in item:
-            msg = 'Dot Notation disabled : {}'.format(item)
-            raise AttributeError(msg)
-        else:
-            return False
-
-    def _parse_item(self, section=None, option=None):
-
-        if self._parsable(section):
-            ret_section = self._sk(get_before(section, self._sec_opt_sep))
-            ret_option = get_after(section, self._sec_opt_sep)
-            return ret_section, ret_option
-
-        if self._parsable(option):
-            ret_section = get_before(option, self._sec_opt_sep)
-            ret_option = get_after(option, self._sec_opt_sep)
-            return ret_section, ret_option
-
-        return section, option
-    '''
-
-    def _interpolate(self, section, value):
-        if self._interpolator is None or not isinstance(value, str):
-            return value
-        else:
-            return self._interpolator.before_get(self, section, value)
-
-    @property
-    def editable(self):
-        if not self._editable:
-            raise LockedSectionError('Editing must be done from within ConfigManager')
-        return True
-
-    def item(self, section, option=None, value=None):
-        section = self._xform.section(section)
-        if section in self:
-            if option is not None:
-                tmp_sec = self._section_dict[section]
-            else:
-                if self._raise_on_add_exist:
-                    raise DuplicateSectionError(section=section)
-                else:
-                    return self._section_dict[section]
-        else:
-            if option is None:
-                if self.editable:
-                    self._section_dict[section] = ConfigROSectionDict(self, section, options=value)
-                    return self._section_dict[section]
-            else:
-                if self.editable:
-                    self._section_dict[section] = ConfigROSectionDict(self, section)
-                    tmp_sec = self._section_dict[section]
-
-        option = self._xform.option(option)
-        if option in tmp_sec:
-            if self._raise_on_add_exist:
-                raise DuplicateOptionError(section=section, option=option)
-            if value is None:
-                return tmp_sec._options_dict[option]
-            else:
-                if self.editable:
-                    tmp_sec._options_dict[option] = value
-                    return value
-        else:
-            if value is None:
-                raise AttributeError('If adding options, value must be passed.')
-            else:
-                if self.editable:
-                    tmp_sec.option_dict[option] = value
-                    return value
-
-    def get(self, section, option=None):
-        section, option = self._parse_item(section, option)
-        if option is None:
-            return self.item(section)
-        tmp_ret = self.item(section, option)
-
-        if self._interpolator is None:
-            return tmp_ret
-        else:
-            return self._interpolate(section, tmp_ret)
-
-    def set(self, section, option=None, value=None):
-        section, option = self._parse_item(option, section)
-        tmp_ret = self.item(section, option, value)
-        return tmp_ret
-
-    def delitem(self, section, option=None):
-        section, option = self._parse_item(option, section)
-        section = self._xform.section(section)
-
-        if self._editable:
-            if section in self:
-                if option is None:
-                    tmp_ret = self._section_dict[section]
-                    del self._section_dict[section]
-                    return tmp_ret
-                else:
-                    option = self._xform.option(option)
-                    tmp_sec = self._section_dict[section]
-                    if option in tmp_sec:
-                        tmp_ret = tmp_sec[option]
-                        del tmp_sec[option]
-                        return tmp_ret
-                    else:
-                        if self._raise_on_get_not_exist:
-                            raise NoOptionError(option=option)
-            else:
-                if self._raise_on_get_not_exist:
-                    raise NoSectionError(section=section)
-        else:
-            raise LockedSectionError('Editing must be done from within ConfigManager')
-
-    def contains(self, section, option=None):
-        section, option = self._parse_item(section, option)
-        section = self._xform.section(section)
-
-        if section in self._section_dict:
-            if option is None:
-                return True
-            else:
-                option = self._xform.option(option)
-                if option in self._section_dict[section]._options_dict:
-                    return True
-        return False
-
-    def __getitem__(self, item):
-        return self.get(item)
-
-    def __setitem__(self, section, value):
-        return self.set(section, option=None, value=value)
-
-    def __delitem__(self, section):
-        return self.delitem(section)
-
-    def __contains__(self, item):
-        return self.contains(item)
-
-    def __iter__(self):
-        for key, item in self._section_dict.items():
-            yield item
 
 class ConfigOption(object):
     def __init__(self, section, name, *args, **kwargs):
@@ -1332,123 +1078,115 @@ class ConfigSection(object):
 
 
 class ConfigManager(object):
-    # Interpolation algorithm to be used if the user does not specify another
-    _DEFAULT_INTERPOLATION = Interpolation()
-    _DEFAULT_STORAGE_MANAGER = ConfigFileStorage()
-    _DEFAULT_SECT_NAME = "__DEFAULT__"
+    """
+    :param allow_no_value: allow empty values.
+    :param empty_lines_in_values:
+    :param allow_add_from_storage: allow adding sections and options directly from the storage
+    :param allow_create_on_set: allows sections to be created when the set command is used.
+        the set command can only be used to set the values of options, so this REQUIRES using dot-notation.
+    :param no_sections: this will disable all sections and all options will be accessible from the base manager
+        object.  (this creates a section named "default_section".)
+        .. warning:: converting from simple configurations to sections may require manual data minipulation!
+    :param section_defaults: a dictionary of settings used as defaults for all sections created
+    :param interpolation: can be defined if interpolation is requested or required.
+    :param str section_option_sep: defines a seperator character to use for getting options using the dot_notation
+        style of query. defaults to '.', in which case options can be queried by calling
+        ConfigManager[section.option] in addition to ConfigManager[section][option].  If this is set to None, dot
+        notation will be disabled.
+    :param cli_program: the name of the program for the cli help screen (by default this will use the program run
+        to launch the app)
+    :param cli_desc: the text to show above the arguments in the cli help screen.
+    :param cli_epilog: the text to show at the end of the arguments in the cli help screen.
+    :param raise_error_on_locked_edit: if True, will raise an error if an attempt to change locked options,
+        if False (default) the error is suppressed and the option will not be changed.
+    :param storage_managers: a list of storage managers to use, if none are passed, the configuration will not be
+        able to be saved.
+    :param cli_parser_name: the name of the cli parser if not the default.  set to None if the CLI parser
+        is not to be used.
+    :param cli_group_by_section: True if cli arguments shoudl be grouped by section for help screens.
+    :param version_class: 'loose', 'strict', a subclass of the Version class or None for no versioning.
+    :type version_class: Version or str or None
+    :param str version: the version number string.
+    :param str version_option_name: the option named used to store the version for each section, {section} will be
+        replaced by the name of the section.
+    :param bool version_allow_unversioned: if True, the system will import unversioned data, if false, the version
+        of the data must be specified when importing any data.
+    :param bool version_enforce_versioning: if True, the system will raise an error if no version is set at the
+        section or base level.
+    :param bool version_disable_cross_section_copy:  if True, cross section copy will not work.  Used when you have
+        plugins from different authors and you want to segment them.
+    :param list version_make_migrations: this is a list of migrations that can be performed, (see :doc:`migration`\ )
+    :param kwargs: if "no_sections" is set, all section options can be passed to the ConfigManager object.
+    """
+    _name = 'System Configuration'
 
-    # ******************** Finish items ***************************
-    #: TODO: implement allow no value
-    #: TODO: implement upgrade/downgrade functions
-    #: TODO: Document system.
+    # Helper Classes Used
+    _DEFAULT_INTERPOLATION = Interpolation
+    _DEFAULT_STORAGE_PLUGINS = (ConfigFileStorage, ConfigCLIStorage)
+    _DEFAULT_STORAGE_MANAGER = StorageManagerManager
+    _DEFAULT_CLI_MANAGER = ConfigCLIStorage
+    _DEFAULT_XFORM = Xform
+    _DEFAULT_SECTION_CLASS = ConfigSection
+    _DEFAULT_OPTION_CLASS = ConfigOption
+    _DEFAULT_MIGRATION_CLASS = ConfigMigrationManager
+    _DEFAULT_VERSION_MANAGER_CLASS = LooseVersion
+    _DEFAULT_DATA_DICT = ConfigRODict
 
-    def __init__(self,
-                 name='Configuration',
-                 # dict_type=_default_dict,
-                 allow_no_value=False,
-                 *,
-                 empty_lines_in_values=True,
-                 allow_add_from_storage=True,
-                 allow_create_on_set=True,
-                 no_sections=False,
-                 section_defaults=None,
-                 interpolation=_UNSET,
-                 section_option_sep='.',
-                 cli_program=None,
-                 cli_desc=None,
-                 cli_epilog=None,
-                 cli_group_by_section=True,
-                 cli_parser_name='cli',
-                 raise_error_on_locked_edit=False,
-                 storage_managers=None,
-                 version_class=None,
-                 version=None,
-                 version_option_name='{section}_version_number',
-                 version_allow_unversioned=True,
-                 version_enforce_versioning=False,
-                 version_disable_cross_section_copy=False,
-                 version_migrations=None,
-                 **kwargs
-                 ):
-        """
-        :param allow_no_value: allow empty values.
-        :param empty_lines_in_values:
-        :param allow_add_from_storage: allow adding sections and options directly from the storage
-        :param allow_create_on_set: allows sections to be created when the set command is used.
-            the set command can only be used to set the values of options, so this REQUIRES using dot-notation.
-        :param no_sections: this will disable all sections and all options will be accessible from the base manager
-            object.  (this creates a section named "default_section".)
-            .. warning:: converting from simple configurations to sections may require manual data minipulation!
-        :param section_defaults: a dictionary of settings used as defaults for all sections created
-        :param interpolation: can be defined if interpolation is requested or required.
-        :param str section_option_sep: defines a seperator character to use for getting options using the dot_notation
-            style of query. defaults to '.', in which case options can be queried by calling
-            ConfigManager[section.option] in addition to ConfigManager[section][option].  If this is set to None, dot
-            notation will be disabled.
-        :param cli_program: the name of the program for the cli help screen (by default this will use the program run
-            to launch the app)
-        :param cli_desc: the text to show above the arguments in the cli help screen.
-        :param cli_epilog: the text to show at the end of the arguments in the cli help screen.
-        :param raise_error_on_locked_edit: if True, will raise an error if an attempt to change locked options,
-            if False (default) the error is suppressed and the option will not be changed.
-        :param storage_managers: a list of storage managers to use, if none are passed, the configuration will not be
-            able to be saved.
-        :param cli_parser_name: the name of the cli parser if not the default.  set to None if the CLI parser
-            is not to be used.
-        :param cli_group_by_section: True if cli arguments shoudl be grouped by section for help screens.
-        :param version_class: 'loose', 'strict', a subclass of the Version class or None for no versioning.
-        :type version_class: Version or str or None
-        :param str version: the version number string.
-        :param str version_option_name: the option named used to store the version for each section, {section} will be
-            replaced by the name of the section.
-        :param bool version_allow_unversioned: if True, the system will import unversioned data, if false, the version
-            of the data must be specified when importing any data.
-        :param bool version_enforce_versioning: if True, the system will raise an error if no version is set at the
-            section or base level.
-        :param bool version_disable_cross_section_copy:  if True, cross section copy will not work.  Used when you have
-            plugins from different authors and you want to segment them.
-        :param list version_make_migrations: this is a list of migrations that can be performed, (see :doc:`migration`\ )
-        :param kwargs: if "no_sections" is set, all section options can be passed to the ConfigManager object.
-        """
+    # Storgae Options
+    _default_cli_name = 'cli'
+    _default_storage_name = ('txt',)
 
-        self.last_fail_list = []
-        self._name = name
-        self._dict = _default_dict
-        self._sections = self._dict()
-        self._allow_no_value = allow_no_value
-        self._allow_add_from_storage = allow_add_from_storage
-        self._empty_lines_in_values = empty_lines_in_values
-        self._no_sections = no_sections
-        self._interpolation = interpolation
-        self._cli_parser_args = {'prog': cli_program, 'description': cli_desc, 'epilog': cli_epilog}
-        self._raise_error_on_locked_edit = raise_error_on_locked_edit
-        self._allow_unversioned = version_allow_unversioned
-        self._enforce_versioning = version_enforce_versioning
+    # Security Values
+    _allow_add_from_storage = True
+    _allow_create_on_set = True
+    _raise_error_on_locked_edit = False
 
-        self._version_option_name = version_option_name
-        self._allow_create_on_set = allow_create_on_set
+    # Section Configuration
+    _no_sections = False
+    _no_section_section_name = "__DEFAULT__"
+    _section_option_sep = '.'
+
+    # CLI Settings
+    _cli_program = None
+    _cli_desc = None
+    _cli_epilog = None
+    _cli_group_by_section = True
+
+    # Migration and Versions
+    _version_option_name = '{section}_version_number'
+    _allow_unversioned = True
+    _enforce_versioning = False
+    _disable_cross_section_copy = False
+
+    # allow_no_value = False
+    # empty_lines_in_values = True
+
+    def __init__(self, data_dict=None, version=None, migrations=None):
 
         if self._no_sections:
-            self._cli_group_by_section = False
-            self._version_disable_cross_section_copy = True
             self._section_option_sep = None
-        else:
-            self._cli_group_by_section = cli_group_by_section
-            self._version_disable_cross_section_copy = version_disable_cross_section_copy
-            self._section_option_sep = section_option_sep
+            self._cli_group_by_section = False
+            self._disable_cross_section_copy = True
 
-        if version_class is None:
-            self._version_class = LooseVersion
+        self._xform = self._DEFAULT_XFORM(self._section_option_sep)
+        self._interpolator = self._DEFAULT_INTERPOLATION(self, self._xform, sep=self._section_option_sep)
+
+        if data_dict is None:
+            self._data_dict = self._DEFAULT_DATA_DICT(self)
+
+        if issubclass(self._data_dict, self._DEFAULT_DATA_DICT):
+            self._lockable_data_dict = True
+            self._data_dict._interpolator = self._interpolator
+            self._data_dict._xform = self._xform
         else:
-            if isinstance(version_class, str):
-                if version_class == 'loose':
-                    self._version_class = LooseVersion
-                elif version_class == 'strict':
-                    self._version_class = StrictVersion
-                else:
-                    raise AttributeError('Invalid version class passed')
-            else:
-                self._version_class = version_class
+            self._lockable_data_dict = False
+
+        self.last_fail_list = []
+        self._sections = {}
+
+        self._cli_parser_args = {'prog': self._cli_program, 'description': self._cli_desc, 'epilog': self._cli_epilog}
+
+        self._version_class = self._DEFAULT_VERSION_MANAGER_CLASS
 
         if version is not None:
             ip.debug('Version is not None, setting version to: ', version)
@@ -1456,35 +1194,19 @@ class ConfigManager(object):
         else:
             self._version = None
 
-        if section_defaults:
-            self.section_defaults = section_defaults
-        else:
-            self.section_defaults = {}
-
-        if interpolation is _UNSET:
-            self._interpolation = self._DEFAULT_INTERPOLATION
-        elif interpolation is None:
-            self._interpolation = NoInterpolation(sep=self._section_option_sep)
-        else:
-            self._interpolation = interpolation(sep=self._section_option_sep)
-
         self._cli_flags = []
         self._cli_args = {}
-        self._cli_parser_name = cli_parser_name
-        if storage_managers:
-            self._storage = StorageManagerManager(self, storage_managers, cli_parser_name=cli_parser_name)
-        else:
-            self._storage = StorageManagerManager(self, self._DEFAULT_STORAGE_MANAGER, cli_parser_name=cli_parser_name)
 
-        # self._cli_parser = None
+        self._storage = self._DEFAULT_STORAGE_MANAGER(self, self._DEFAULT_STORAGE_PLUGINS,
+                                                      cli_parser_name=self._default_cli_name)
 
-        if version_migrations is None:
+        if migrations is None:
             self._migrations = []
         else:
-            self._migrations = version_migrations
+            self._migrations = migrations
 
         if self._no_sections:
-            self.add_section(self._DEFAULT_SECT_NAME, force_add_default=True, **kwargs)
+            self.add_section(self._DEFAULT_SECT_NAME, force_add_default=True)
 
     def _debug_(self):
         ip.si(False)
@@ -1493,21 +1215,18 @@ class ConfigManager(object):
         ip.debug('Name     : ', self.name)
 
         ip.debug('SECURITY FLAGS').a()
-        ip.debug('Allow No Value              : ', self._allow_no_value)
         ip.debug('Allow Add from Storage      : ', self._allow_add_from_storage)
-        ip.debug('Allow Empty Lines in values : ', self._empty_lines_in_values)
         ip.debug('Allow create on set         : ', self._allow_create_on_set)
-        ip.debug('Disable Cross Section Copy  : ', self._version_disable_cross_section_copy)
+        ip.debug('Disable Cross Section Copy  : ', self._disable_cross_section_copy)
         ip.debug('Section Options Sep         : ', self._section_option_sep)
 
 
         ip.s().debug('SECTION').a()
         ip.debug('No Sections            : ', self._no_sections)
         ip.debug('Sections               : ', self.sections)
-        ip.debug('Section Default Dict   : ', self.section_defaults)
 
         ip.s().debug('INTERPOLATION').a()
-        ip.debug('Interpolation Class : ', self._interpolation)
+        ip.debug('Interpolation Class : ', self._interpolator)
 
         ip.s().debug('VERSIONS').a()
         ip.debug('Version                  : ', self._version)
@@ -1522,7 +1241,6 @@ class ConfigManager(object):
         ip.debug('Group CLI By Section        : ', self._cli_group_by_section)
         ip.debug('CLI Flags                   : ', self._cli_flags)
         ip.debug('CLI Args                    : ', self._cli_args)
-        ip.debug('CLI Parser Name             : ', self._cli_parser_name)
         ip.debug('CLI Parser Args             : ', self._cli_parser_args)
 
         ip.debug('Raise Error on Locked Files : ', self._raise_error_on_locked_edit)
@@ -1533,6 +1251,8 @@ class ConfigManager(object):
         ip.debug('Migration Managers : ', self._migrations)
         ip.s(2)
 
+    def _xf(self, section):
+        return self._xform.both(section, option_or_section='section')
 
     @property
     def version(self):
@@ -1566,6 +1286,16 @@ class ConfigManager(object):
                 self.last_fail_list.append(tmp_name)
                 return False
         return True
+    
+    @property
+    def _data(self):
+        if self._lockable_data_dict:
+            self._data_dict._editable=True
+        return self._data_dict            
+    
+    def _data_lock(self):
+        if self._lockable_data_dict:
+            self._data_dict._editable=False
 
     def add_section(self, section, force_add_default=False, **kwargs):
         """Create a new section in the configuration.
@@ -1576,21 +1306,15 @@ class ConfigManager(object):
         if self._no_sections and not force_add_default:
             raise SimpleConfigError(section)
 
-        section = self.sectionxform(section)
+        section, option = self._xf(section)
 
-        options = kwargs.pop('options', None)
         kwargs['version_migrations'] = self.get_sec_migrations(section)
 
         if section in self._sections:
             raise DuplicateSectionError(section)
 
-        with_defaults = copy.copy(self.section_defaults)
-        with_defaults.update(kwargs)
-
-        self._sections[section] = ConfigSection(self, section, **with_defaults)
-
-        if options is not None:
-            self[section].add(options)
+        self._sections[section] = ConfigSection(self, section, data=self._data(section), **kwargs)
+        self._data_lock()
 
     def add(self, *args, **kwargs):
         """
@@ -1673,6 +1397,7 @@ class ConfigManager(object):
 
                 self.add_section(s)
 
+    '''
     def has_section(self, section):
         """Indicate whether the named section is present in the configuration.
         """
@@ -1680,7 +1405,8 @@ class ConfigManager(object):
             raise SimpleConfigError(section)
 
         return self.sectionxform(section) in self._sections
-
+    '''
+    '''
     def optionxform(self, optionstr, extra_allowed='_'):
         """
         Will transform the option name string as needed, by default this will slugify and lowercase the string.
@@ -1696,7 +1422,8 @@ class ConfigManager(object):
         This can be overridden as desired.
         """
         return slugify(sectionstr, extra_allowed, 'upper', punct_replace='_')
-
+    '''
+    
     # ****************************************************************************************************************
     # **                Storage Methods
     # ****************************************************************************************************************
@@ -1733,44 +1460,47 @@ class ConfigManager(object):
             this will raise an AssignmentError if data is not None and more than one storage tag is passed.
         """
         self.storage.read(sections=sections, storage_names=storage_names, override_tags=override_tags, data=data, **kwargs)
-
+        
+    # ****************************************************************************************************************
+    # **                Magic Methods
+    # ****************************************************************************************************************
+        
     def __getitem__(self, key):
         """
-        returns a section object
-        :param key:
-        :rtype ConfigSection:
+        returns a section or option value
+        :param str key:
         """
-
         if self._no_sections:
-            return self._sections[self._DEFAULT_SECT_NAME][key]
+            return self._sections[self._no_section_section_name][key]
 
-        elif self._section_option_sep is not None and self._section_option_sep in key:
-            sec_key = self.sectionxform(get_before(key, self._section_option_sep))
-            opt_key = self.optionxform(get_after(key, self._section_option_sep))
+        section, option = self._xf(key)
 
-            try:
-                return self._sections[sec_key][opt_key]
-            except KeyError:
-                raise NoSectionError(key)
-
-        else:
-            try:
-                return self._sections[self.sectionxform(key)]
-            except KeyError:
-                raise NoSectionError(key)
+        try:
+            if option is _UNSET:
+                return self._sections[section]
+            else:
+                return self._sections[section][option]
+        except KeyError:
+            raise NoSectionError(section=section)
 
     def __setitem__(self, key, value):
         if self._no_sections:
-            self._sections[self._DEFAULT_SECT_NAME][key] = value
+            self._sections[self._no_section_section_name][key] = value
 
-        elif self._section_option_sep is not None and self._section_option_sep in key:
-            sec_key = self.sectionxform(get_before(key, self._section_option_sep))
-            opt_key = self.optionxform(get_after(key, self._section_option_sep))
+        section, option = self._xf(key)
 
-            if sec_key not in self:
-                self.add_section(sec_key)
+        if option is _UNSET:
+            if isinstance(value, dict):
+                self.add_section(key, **value)
+            else:
+                raise ValueError('sections added this way must use a dictionary for options')
+        else:
+            if section not in self:
+                self.add_section(section)
 
-            self[sec_key][opt_key] = value
+            self[section][option] = value
+
+
 
         else:
             if key not in self:
@@ -1783,7 +1513,7 @@ class ConfigManager(object):
 
     def __contains__(self, key):
         if self._no_sections:
-            return key in self._sections[self._DEFAULT_SECT_NAME]
+            return key in self._sections[self._no_section_section_name]
 
         elif self._section_option_sep is not None and self._section_option_sep in key:
             sec_key = get_before(key, self._section_option_sep)
@@ -1798,20 +1528,21 @@ class ConfigManager(object):
 
     def __len__(self):
         if self._no_sections:
-            return len(self._sections[self._DEFAULT_SECT_NAME])
+            return len(self._sections[self._no_section_section_name])
         else:
             return len(self._sections)
 
     def __iter__(self):
         if self._no_sections:
-            for o in self._sections[self._DEFAULT_SECT_NAME]:
+            for o in self._sections[self._no_section_section_name]:
                 yield o
         else:
             for k, s in self._sections.items():
                 yield s
-
+    '''
     @staticmethod
     def _convert_to_boolean(value):
         return convert_to_boolean(value)
 
         # removed
+    '''

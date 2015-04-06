@@ -1,6 +1,6 @@
 __author__ = 'dstrohl'
 __all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataTypeDict',
-           'DataTypeGenerator', 'data_type_generator', '_UNSET', 'Xform', 'ItemKey']
+           'DataTypeGenerator', 'data_type_generator']
 
 
 import ast
@@ -8,31 +8,9 @@ import copy
 from AdvConfigMgr.utils import make_list, convert_to_boolean, slugify, get_after, get_before
 from AdvConfigMgr.config_validation import ValidationError
 from unicodedata import normalize
+from AdvConfigMgr.utils.unset import _UNSET
 
-
-class UnSet(object):
-    UnSetValidationString = '_*_This is the Unset Object_*_'
-    """
-    Used in parser getters to indicate the default behaviour when a specific
-    option is not found it to raise an exception. Created to enable `None' as
-    a valid fallback value.
-    """
-    def __repr__(self):
-        return 'Empty Value'
-
-    def __str__(self):
-        return 'Empty Value'
-
-    def __get__(self):
-        return str(self)
-
-    def __eq__(self, other):
-        return isinstance(other, UnSet)
-
-
-_UNSET = UnSet()
-
-
+'''
 class ItemKey(object):
     _sec_opt_sep = '.'
     _def_glob_chars = '*?[]!'
@@ -45,6 +23,7 @@ class ItemKey(object):
         self._option = None
         self._dot = False
         self._xform_class = Xform()
+        
         glob = kwargs.pop('glob', None)
         if glob:
             self._glob_chars = self._def_glob_chars
@@ -146,73 +125,7 @@ class ItemKey(object):
 
     def __repr__(self):
         return str(self)
-
-
-
-class Xform(object):
-
-    def option(self, optionstr, extra_allowed='_'):
-        """
-        Will transform the option name string as needed, by default this will slugify and lowercase the string.
-
-        This can be overridden as desired.
-        """
-        return self.slugify(optionstr, extra_allowed, 'lower', punct_replace='_')
-
-    def section(self, sectionstr, extra_allowed='_'):
-        """
-        Will transform the section name string as needed, by default this will slugify and uppercase the string.
-
-        This can be overridden as desired.
-        """
-        return self.slugify(sectionstr, extra_allowed, 'upper', punct_replace='_')
-
-    @staticmethod
-    def slugify(text, delim='_', case='lower', allowed=None, punct_replace='', encode=None):
-        """
-        generates a simpler text string.
-
-        :param text:
-        :param delim: a string used to delimit words
-        :param case: ['lower'/'upper'/'no_change']
-        :param allowed: a string of characters allowed that will not be replaced.  (other than normal alpha-numeric which
-            are never replaced.
-        :param punct_replace: a string used to replace punction characters, if '', the characters will be deleted.
-        :param encode: Will encode the result in this format.
-        :return:
-        """
-
-        if text is None or not isinstance(text, str):
-            return text
-
-        punct = '[\t!"#$%&\'()*\-/<=>?@\[\\\]^_`{|},.]+'
-        if allowed is not None:
-            for c in allowed:
-                punct = punct.replace(c, '')
-
-        result = []
-
-        for word in text.split():
-            word = normalize('NFKD', word)
-            for c in punct:
-                word = word.replace(c, punct_replace)
-            result.append(word)
-
-        delim = str(delim)
-        # print('sluggify results: ', result)
-        text_out = delim.join(result)
-
-        if encode is not None:
-            text_out.encode(encode, 'ignore')
-
-        if case == 'lower':
-            return text_out.lower()
-        elif case == 'upper':
-            return text_out.upper()
-        else:
-            return text_out
-
-
+'''
 
 class DataTypeGenerator(object):
 

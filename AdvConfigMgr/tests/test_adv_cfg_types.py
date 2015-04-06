@@ -1,8 +1,10 @@
 __author__ = 'dstrohl'
 
 import unittest
-from AdvConfigMgr.config_types import ItemKey
+from AdvConfigMgr.config_types import Xform, _UNSET
 
+
+'''
 class TestItemKey(unittest.TestCase):
 
     def test_item_key(self):
@@ -47,9 +49,4 @@ class TestItemKey(unittest.TestCase):
         ik(section='sec5.opt4', option='opt6')
         self.assertEqual(ik.s, 'SEC5')
         self.assertEqual(ik.o, 'opt6')
-
-
-
-
-if __name__ == '__main__':
-    unittest.main()
+'''
