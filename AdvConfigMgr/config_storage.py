@@ -12,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 
 __all__ = ['BaseConfigStorageManager', 'StorageManagerManager', 'ConfigCLIStorage', 'ConfigSimpleDictStorage',
-           'ConfigFileStorage', 'ConfigStringStorage','BaseConfigRecordBasedStorageManager']
+           'ConfigFileStorage', 'ConfigStringStorage', 'BaseConfigRecordBasedStorageManager']
 
 
 class BaseConfigStorageManager(object):
@@ -292,7 +292,7 @@ class BaseConfigStorageManager(object):
 
         self.last_section_count = 0
         self.last_option_count = 0
-        self.processed_sections = []   # used by the record type storage manager.
+        self.processed_sections = []  # used by the record type storage manager.
 
         if self.manager._no_sections:
             section_name = self.manager._DEFAULT_SECT_NAME
@@ -369,6 +369,7 @@ class BaseConfigRecordBasedStorageManager(BaseConfigStorageManager):
     This base method is intended to be used for record based storage managers, when saving options to the system,
     this will also poll the deleted records list and remove them from the database.
     """
+
     def _save_dict(self, dict_in, section_name=None, storage_name=None):
         self.processed_sections = []
 
@@ -940,7 +941,6 @@ class ConfigStringStorage(BaseConfigStorageManager):
                 for option, value in item.items():
                     if isinstance(value, list):
                         out_dict[key][option] = '\n'.join(value).rstrip()
-
 
         return out_dict
 

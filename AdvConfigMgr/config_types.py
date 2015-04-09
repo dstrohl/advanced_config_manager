@@ -2,7 +2,6 @@ __author__ = 'dstrohl'
 __all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataTypeDict',
            'DataTypeGenerator', 'data_type_generator']
 
-
 import ast
 import copy
 from AdvConfigMgr.utils import make_list, convert_to_boolean, slugify, get_after, get_before
@@ -127,8 +126,8 @@ class ItemKey(object):
         return str(self)
 '''
 
-class DataTypeGenerator(object):
 
+class DataTypeGenerator(object):
     def __init__(self, *args):
         self._type_classes = {}
         for t in args:
@@ -196,7 +195,7 @@ class DataTypeBase(object):
             tmp_msg = '%r is does not match the datatype requirement of %s' % (value, self.name)
             raise ValidationError(tmp_msg)
 
-        # return self._validations(value) and self._validate_datatype(value)
+            # return self._validations(value) and self._validate_datatype(value)
 
     def _validations(self, value):
         if self.validations is not None:
