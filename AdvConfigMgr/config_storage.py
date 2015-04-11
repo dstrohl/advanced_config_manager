@@ -17,7 +17,14 @@ __all__ = ['BaseConfigStorageManager', 'StorageManagerManager', 'ConfigCLIStorag
 
 class BaseConfigStorageManager(object):
     """
-
+    :param str storage_name: The internal name of the storage manager, must be unique
+    :param bool allow_create: True if this can create options in the system, even if they are not pre-configured.
+    :param bool standard:  True if this should be used for read_all/write_all ops
+    :param bool force:True if this will set options even if they are locked
+    :param bool overwrite: True if this will overwrite options that have existing values
+    :param bool lock_after_read: True if this will lock the option after reading
+    :param int priority: the priority of this manager, with smallest being run earlier than larger.
+\
     Base class for storage managers, efines an expandable storage subsystem for configs
 
     at a minimum, any sub classes should define the following initial values:
@@ -51,33 +58,12 @@ class BaseConfigStorageManager(object):
     overwrite = True
     lock_after_read = False
 
-    def __init__(self,
-                 storage_name=None,
-                 allow_create=None,
-                 standard=None,
-                 force=None,
-                 overwrite=None,
-                 lock_after_read=None,
-                 priority=100):
-        """
-        :param str storage_name: The internal name of the storage manager, must be unique
-        :param bool allow_create: True if this can create options in the system, even if they are not pre-configured.
-        :param bool standard:  True if this should be used for read_all/write_all ops
-        :param bool force:True if this will set options even if they are locked
-        :param bool overwrite: True if this will overwrite options that have existing values
-        :param bool lock_after_read: True if this will lock the option after reading
-        :param int priority: the priority of this manager, with smallest being run earlier than larger.
-        :return:
-        """
-        self.manager = None  # this is set during registration.
+    priority = 100
 
-        self.storage_name = storage_name or self.storage_name
-        self.allow_create = allow_create or self.allow_create
-        self.force = force or self.force
-        self.standard = standard or self.standard
-        self.overwrite = overwrite or self.overwrite
-        self.lock_after_read = lock_after_read or self.lock_after_read
-        self.priority = priority
+    def __init__(self):
+
+        """:type self.manager: AdvConfigMgr.advconfigmgr.ConfigManager  """
+        self.manager = None  # this is set during registration.
 
         self._flat_dict = None
 
@@ -87,6 +73,22 @@ class BaseConfigStorageManager(object):
         self.data = None
 
         ip.info('Loading storage manager: ', self.storage_name)
+
+    def config(self, config_dict):
+        """
+        :param config_dict: a dictionary with storage specific configuration options., this is called after the storage
+            manager is loaded.
+        """
+        self.priority = config_dict.get('priority', self.priority)
+
+        self.storage_type_name = config_dict.get('storage_type_name', self.storage_type_name)
+        self.storage_name = config_dict.get('storage_name', self.storage_name)
+        self.force_strings = config_dict.get('force_strings', self.force_strings)
+        self.standard = config_dict.get('standard', self.standard)
+        self.allow_create = config_dict.get('allow_create', self.allow_create)
+        self.force = config_dict.get('force', self.force)
+        self.overwrite = config_dict.get('overwrite', self.overwrite)
+        self.lock_after_read = config_dict.get('lock_after_read', self.lock_after_read)
 
     def read(self, section_name=None, storage_name=storage_name, **kwargs):
         """
@@ -101,8 +103,8 @@ class BaseConfigStorageManager(object):
 
         The recommended implementation method us to read from your storage method (database, special file, etc) and
         store the arguments in a dictionary or dictionary of dictionaries.  then pass that dict
-        to :py:meth:`BaseConfigStorageManager._save_dict`.  that method will take care of writing the data, converting it
-        if needed, making sure that it is allowed to write, handling locked sections and options, etc...
+        to :py:meth:`BaseConfigStorageManager._save_dict`.  that method will take care of writing the data, converting
+        it if needed, making sure that it is allowed to write, handling locked sections and options, etc...
 
         if the implementation tries to pass data directly to the file manager for importing, it will save the data in
         :py:meth:`BaseConfigStorageManager.data` where you can read it, so you should check this before processing.
@@ -306,7 +308,7 @@ class BaseConfigStorageManager(object):
             section_name = self.manager.sections
 
         for section, options in dict_in.items():
-            section = self.manager.sectionxform(section)
+            section, option = self.manager._xf(section)
             if section in section_name:
                 if self._ok_to_read_section(section, storage_name):
                     self.processed_sections.append(section)
@@ -404,10 +406,10 @@ class ConfigCLIStorage(BaseConfigStorageManager):
     lock_after_read = True  #: True if this will lock the option after reading
     priority = 1
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self._reset_config_cache = True
         self._cli_parser = None
-        super(ConfigCLIStorage, self).__init__(*args, **kwargs)
+        super(ConfigCLIStorage, self).__init__()
 
     def read(self, section_name=None, storage_name=storage_name, **kwargs):
         """
@@ -444,6 +446,7 @@ class ConfigCLIStorage(BaseConfigStorageManager):
             cli_sect = self._cli_parser
 
             for s in self.manager:
+                ip.debug('checking for cli options in sections: ', s.name)
                 if self.manager._cli_group_by_section and s._cli_args:
                     ip.debug('creating CLI section: ', s._cli_section_options['title'])
                     cli_sect = self._cli_parser.add_argument_group(**s._cli_section_options)
@@ -483,10 +486,6 @@ class ConfigSimpleDictStorage(BaseConfigStorageManager):
     storage_name = 'dict'
     standard = False  #: True if this should be used for read_all/write_all ops
 
-    def __init__(self, *args, **kwargs):
-        super(ConfigSimpleDictStorage, self).__init__(*args, **kwargs)
-
-
     def read(self, section_name=None, storage_name=storage_name, **kwargs):
         """
         will take a dictionary and save it to the system
@@ -507,205 +506,26 @@ class ConfigSimpleDictStorage(BaseConfigStorageManager):
         return self.last_section_count, self.last_option_count
 
 
-class StorageManagerManager(object):
-    """
-    A class to handle storage managers
-    """
-
-    def __init__(self, config_manager, managers=None, cli_parser_name='cli', cli_manager=None):
-        """
-        :param config_manager: a link to the ConfigurationManager object
-        :param managers: the managers to be registered.  The first manager passed will be imported as the default
-        :param cli_parser_name: the name of the cli parser if not 'cli', if None, this will disable CLI parsing.
-        :param cli_manager: None uses the standard CLI Parser, this allows replacement of the default cli manager
-        """
-        self.config_manager = config_manager
-        self.tag_dict = {}
-        self.manager_list = []
-        self.default_manager = None
-        set_as_default = True
-
-        if not isinstance(managers, (list, tuple)):
-            managers = [managers]
-
-        for a in managers:
-            self.register_storage(a, default=set_as_default)
-            set_as_default = False
-
-        if cli_parser_name is not None:
-            if cli_parser_name not in self:
-                if cli_manager is None:
-                    cli_manager = ConfigCLIStorage()
-                cli_manager.storage_name = cli_parser_name
-                self.register_storage(cli_manager)
-
-    def register_storage(self, storage_manager, default=False):
-        ip.debug('registering storage manager')
-
-        storage_manager.manager = self.config_manager
-        self.tag_dict[storage_manager.storage_name] = storage_manager
-
-        if default or self.default_manager is None:
-            self.default_manager = storage_manager
-
-        if storage_manager.standard:
-            self.manager_list.append(storage_manager)
-
-        self._sort_list()
-
-        ip.info('Storage Manager [', storage_manager.storage_name, '] registered')
-
-    def _sort_list(self):
-        self.manager_list.sort(key=lambda x: x.priority)
-
-    def get(self, tag=None):
-        if tag is None:
-            ip.debug('fetching default storage:')
-
-            return self.default_manager
-
-        try:
-            tmp_ret = self.tag_dict[tag]
-            ip.debug('fetching storage for: ', tmp_ret)
-            return tmp_ret
-
-        except KeyError:
-            ip.debug('storage not found for: ', tag)
-
-            raise NoStorageManagerError(tag)
-
-    def get_data(self, tag=None):
-        return self.get(tag).data
-
-    def set_data(self, data, tag=None):
-        self.get(tag).data = data
-
-    def read(self, sections=None, storage_names=None, override_tags=False, data=None):
-        """
-        runs the read from storage process for the selected or configured managers
-
-        :param storage_names: If None, will read from all starnard storage managers, if a string or list, will read from
-            the selected ones following the configured tag settings.
-        :param sections: If None, will read from all sections, if string or list, will read from the selected ones
-            following the configured tag settings.
-        :param override_tags: if True, this will override the configured storage name settings allowing things like
-            exporting the full config etc.
-        :param data: if a single storage name is passed, then data can be passed to that storage manager for saving.
-            this will raise an AssignmentError if data is not None and more than one storage name is passed.
-        """
-
-        tmp_section_count = 0
-        tmp_option_count = 0
-        tmp_storage_manager_count = 0
-
-        tmp_run_list = []
-
-        if storage_names is None:
-            tmp_run_list.extend(self.manager_list)
-        else:
-            storage_names = make_list(storage_names)
-
-            for t in storage_names:
-                tmp_run_list.append(self.get(t))
-
-        if data is not None and tmp_run_list:
-            if len(tmp_run_list) == 1:
-                tmp_run_list[0].data = data
-            else:
-                raise AttributeError('Data cannot be passed when reading from multiple storage managers')
-
-        for s in tmp_run_list:
-            tmp_storage_manager_count += 1
-            if override_tags:
-                use_tag = '*'
-            else:
-                use_tag = s.storage_name
-
-            tsc, toc = s.read(sections, use_tag)
-            tmp_section_count += tsc
-            tmp_option_count += toc
-
-        ip.info('read from storage managers').a()
-        ip.info('sections: ', tmp_section_count)
-        ip.info('options: ', tmp_option_count)
-        ip.info('managers: ', tmp_storage_manager_count).s()
-
-    def write(self, sections=None, storage_names=None, override_tags=False, **kwargs):
-        """
-        runs the write to storage process for the selected or configured managers
-
-        :param storage_names: If None, will write to all starnard storage managers, if a string or list, will write to the
-            selected ones following the configured tag settings.
-        :param sections: If None, will write to all sections, if string or list, will write to the selected ones
-            following the configured tag settings.
-        :param override_tags: if True, this will override the configured storage name settings allowing things like
-            exporting the full config etc.
-        :return: if ONLY one storage_name is passed, this will return the data from that manager if present.
-        """
-
-        tmp_run_list = []
-
-        tmp_section_count = 0
-        tmp_option_count = 0
-        tmp_storage_manager_count = 0
-
-        if storage_names is None:
-            tmp_run_list.extend(self.manager_list)
-        else:
-            storage_names = make_list(storage_names)
-            ip.debug('making a list...').a()
-            ip.debug('registered storages: ', self.tag_dict)
-            for t in storage_names:
-                ip.debug('adding: ', self.tag_dict[t].storage_name)
-
-                tmp_d = self.get(t)
-                ip.debug('test:', tmp_d, ' tag ', t)
-                tmp_run_list.append(self[t])
-
-        ip.s().debug('Storages to write to: ', tmp_run_list)
-        for s in tmp_run_list:
-            tmp_storage_manager_count += 1
-            if override_tags:
-                use_tag = '*'
-            else:
-                use_tag = s.storage_name
-
-            ip.debug('writing to : ', s).a()
-            tsc, toc = s.write(sections, use_tag, **kwargs)
-            ip.s()
-            tmp_section_count += tsc
-            tmp_option_count += toc
-
-        ip.info('write to storage managers').a()
-        ip.info('sections: ', tmp_section_count)
-        ip.info('options: ', tmp_option_count)
-        ip.info('managers: ', tmp_storage_manager_count).s()
-
-        if len(tmp_run_list) == 1:
-            return tmp_run_list[0].data
-        else:
-            return None
-
-    def __call__(self):
-        return self.default_manager
-
-    def __getitem__(self, item):
-        return self.get(item)
-
-    def __setitem__(self, key, value):
-        self.register_storage(value)
-
-    def __iter__(self):
-        for s in self.manager_list:
-            yield s
-
-
 class ConfigStringStorage(BaseConfigStorageManager):
     """
     A file manager that returns or saves configuration in the format of a string of list. in a text file
 
     this manager handles strings formatted as a standard INI file, or lists of strings formatted that way.
+
+    :param tuple delimiters: the delimiter between the key and the value
+    :param tuple comment_prefixes:  this is a tuple of characters that if they occur as the first non-whitespace
+        character of a line, the line is a comment
+    :param tuple inline_comment_prefixes: this is a tuple of characters that if they occur elsewhere in the line after a
+        whitespace char, the rest of the line is a comment.
+    :param bool space_around_delimiters: True if space should be added around the delimeters.
+    :param bool strict: if False, duplicate sections will be merged, if True, duplicate sections will raise an error
     """
+
+    _delimiters = ('=', ':')
+    _comment_prefixes = ('#', ';')
+    _inline_comment_prefixes = set()
+    _space_around_delimiters = True
+    _strict = True
 
     storage_type_name = 'INI String'
     storage_name = 'string'  #: the internal name of the storage manager, must be unique
@@ -751,37 +571,15 @@ class ConfigStringStorage(BaseConfigStorageManager):
     BOOLEAN_STATES = {'1': True, 'yes': True, 'true': True, 'on': True,
                       '0': False, 'no': False, 'false': False, 'off': False}
 
-    def __init__(self, *,
-                 delimiters=('=', ':'),
-                 comment_prefixes=('#', ';'),
-                 inline_comment_prefixes=None,
-                 space_around_delimiters=True,
-                 strict=True,
-                 **kwargs):
-        """
-        :param tuple delimiters: the delimiter between the key and the value
-        :param tuple comment_prefixes:  this is a tuple of characters that if they occur as the first non-whitespace
-            character of a line, the line is a comment
-        :param tuple inline_comment_prefixes: this is a tuple of characters that if they occur elsewhere in the line after a
-            whitespace char, the rest of the line is a comment.
-        :param bool space_around_delimiters: True if space should be added around the delimeters.
-        :param bool strict: if False, duplicate sections will be merged, if True, duplicate sections will raise an error
-        :param kwargs: any required kwargs from the base storage manager
-        :return:
-        """
-        self._delimiters = tuple(delimiters)
-        if delimiters == ('=', ':'):
+    def __init__(self):
+
+        if self._delimiters == ('=', ':'):
             self._optcre = self.OPTCRE_NV
         else:
-            d = "|".join(re.escape(d) for d in delimiters)
+            d = "|".join(re.escape(d) for d in self._delimiters)
             self._optcre = re.compile(self._OPT_NV_TMPL.format(delim=d), re.VERBOSE)
 
-        self._comment_prefixes = tuple(comment_prefixes or ())
-        self._inline_comment_prefixes = tuple(inline_comment_prefixes or ())
-        self._space_around_delimiters = space_around_delimiters
-        self._strict = strict
-
-        super(ConfigStringStorage, self).__init__(**kwargs)
+        super(ConfigStringStorage, self).__init__()
 
     def read(self, section_name=None, storage_name=storage_name, **kwargs):
         """
@@ -952,7 +750,7 @@ class ConfigStringStorage(BaseConfigStorageManager):
 
         tmp_list = []
         if self._flat_dict:
-            tmp_list.extend(self._format_section(dict_in, 'DEFAULT'))
+            tmp_list.extend(self._format_section(dict_in, 'DEFAULT', new_line=new_line))
         else:
             for k, s in dict_in.items():
                 tmp_list.extend(self._format_section(s, k, new_line))
@@ -1014,118 +812,102 @@ class ConfigFileStorage(ConfigStringStorage):
 
     if a directory path is passed, the files will be sorted based on the "read_path_order" option and processed in that
     order.
+
+    :param tuple delimiters: the delimiter between the key and the value
+    :param tuple comment_prefixes:  this is a tuple of characters that if they occur as the first non-whitespace
+        character of a line, the line is a comment
+    :param tuple inline_comment_prefixes: this is a tuple of characters that if they occur elsewhere in the line after a
+        whitespace char, the rest of the line is a comment.
+    :param bool space_around_delimiters: True if space should be added around the delimeters.
+    :param bool strict: if False, duplicate sections will be merged, if True, duplicate sections will raise an error
+    :param read_filenames: a filename or list of file names, assumed to be in the current directory if not otherwise
+        specified for reading.  These can also be path/globs and the system will attempt to read all files matching
+        that glob filter.  for example, the following are all exampels of valid parameters:
+        'myfile.ini'
+        'dir/myfile.ini'
+        'dir/*.ini'
+        ['myfile.ini', 'myotherfile.ini', 'backup_files/myfile_??.ini']
+        The filename to read from can also be passed during the read operation.
+    :type read_filenames: str or list
+    :param read_path_order: 'alpha' (default) or 'date', the order files will be processed if a path is passed.
+    :param str filename: If used, the single file to read and write to. (cannot be used with read_filenames
+        write_filename.)
+    :param write_filename: the filename to write files to.
+        if None and read_filenames is passed, this will take the first name in the list.
+        if None and read_paths is passed, AND if there is ONLY ONE file in the path that matches the filter,
+        this will use that file.
+        the filename to write to can also be passed during the write operation.
+    :type write_filename: str or None
+    :param bool leave_open: if True, the file objects will be left open while the config manager is loaded.  this can
+        speed up file access, but it also uses up file handles, buffers, memory, and has the possibility of
+        corrupted files.
+    :param bool create_files: if False, will not create any files it does not find.
+    :param bool fail_if_no_file: if False, will fail and raise an error if the specified filename is not found.
+    :param bool make_backup_before_writing: if True, the system will make a backup file before writing the configuration.
+    :param str backup_filename: the filename of the backup file.  this can have the following formatting keys:
+        '{NUM}' for an incremental number (uses the next available number)
+        '{DATE}' for a date string ('YYYYMMDD')
+        '{STIME}' for a 1 second resolution time string ('HHMMSS')
+        '{MTIME}' for a 1 minute resolution time string {'HHMM')
+        '{NAME}' for the old config file name (without extension)
+    :param str backup_path: if not None (the default) this allows the backup file to be in a different location.
+    :param int max_backup_number: the max number (assuming a backup file and NUM in the filename)
+    :param str encoding:
+    :return:
     """
 
     storage_type_name = 'INI File'
     storage_name = 'file'  #: the internal name of the storage manager, must be unique
 
-    def __init__(self, *,
-                 delimiters=('=', ':'),
-                 comment_prefixes=('#', ';'),
-                 inline_comment_prefixes=None,
-                 space_around_delimiters=True,
-                 strict=True,
-                 read_filenames=None,
-                 read_path_order='alpha',
-                 read_path_order_dir='asc',
-                 filename=None,
-                 write_filename=None,
-                 # leave_open=False,
-                 create_files=True,
-                 fail_if_no_file=False,
-                 make_backup_before_writing=False,
-                 backup_filename='{NAME}_{DATE}_{STIME}.bak',
-                 backup_path=None,
-                 max_backup_number=999,
-                 encoding=None,
-                 **kwargs):
+    _create_files = True
+    _fail_if_no_file = False
+    _make_backup_before_writing = False
+    _backup_filename = '{NAME}_{DATE}_{STIME}.bak'
+    _backup_path = None
+    _max_backup_number = 999
+    _encoding = None
+
+    # you should have EITHER a single filename
+    _filename = None
+
+    # OR file names and sets.
+    _read_filenames = None
+    _read_path_order = 'alpha'
+    _read_path_order_dir = 'asc'
+    _write_filename = None
+
+    def config(self, config_dict):
         """
-        :param tuple delimiters: the delimiter between the key and the value
-        :param tuple comment_prefixes:  this is a tuple of characters that if they occur as the first non-whitespace
-            character of a line, the line is a comment
-        :param tuple inline_comment_prefixes: this is a tuple of characters that if they occur elsewhere in the line after a
-            whitespace char, the rest of the line is a comment.
-        :param bool space_around_delimiters: True if space should be added around the delimeters.
-        :param bool strict: if False, duplicate sections will be merged, if True, duplicate sections will raise an error
-        :param read_filenames: a filename or list of file names, assumed to be in the current directory if not otherwise
-            specified for reading.  These can also be path/globs and the system will attempt to read all files matching
-            that glob filter.  for example, the following are all exampels of valid parameters:
-            'myfile.ini'
-            'dir/myfile.ini'
-            'dir/*.ini'
-            ['myfile.ini', 'myotherfile.ini', 'backup_files/myfile_??.ini']
-            The filename to read from can also be passed during the read operation.
-        :type read_filenames: str or list
-        :param read_path_order: 'alpha' (default) or 'date', the order files will be processed if a path is passed.
-        :param str filename: If used, the single file to read and write to. (cannot be used with read_filenames
-            write_filename.)
-        :param write_filename: the filename to write files to.
-            if None and read_filenames is passed, this will take the first name in the list.
-            if None and read_paths is passed, AND if there is ONLY ONE file in the path that matches the filter,
-            this will use that file.
-            the filename to write to can also be passed during the write operation.
-        :type write_filename: str or None
-        :param bool leave_open: if True, the file objects will be left open while the config manager is loaded.  this can
-            speed up file access, but it also uses up file handles, buffers, memory, and has the possibility of
-            corrupted files.
-        :param bool create_files: if False, will not create any files it does not find.
-        :param bool fail_if_no_file: if False, will fail and raise an error if the specified filename is not found.
-        :param bool make_backup_before_writing: if True, the system will make a backup file before writing the configuration.
-        :param str backup_filename: the filename of the backup file.  this can have the following formatting keys:
-            '{NUM}' for an incremental number (uses the next available number)
-            '{DATE}' for a date string ('YYYYMMDD')
-            '{STIME}' for a 1 second resolution time string ('HHMMSS')
-            '{MTIME}' for a 1 minute resolution time string {'HHMM')
-            '{NAME}' for the old config file name (without extension)
-        :param str backup_path: if not None (the default) this allows the backup file to be in a different location.
-        :param int max_backup_number: the max number (assuming a backup file and NUM in the filename)
-        :param str encoding:
-        :param kwargs: any required kwargs from the base storage manager
-        :return:
+        :param dict config_dict: a dictionary with storage specific configuration options., This is called after the
+            storage manager is loaded.
         """
-        self._delimiters = tuple(delimiters)
-        if delimiters == ('=', ':'):
-            self._optcre = self.OPTCRE_NV
+        super(ConfigFileStorage, self).config(config_dict=config_dict)
+
+        self._create_files = config_dict.get('create_files', self._create_files)
+        self._fail_if_no_file = config_dict.get('fail_if_no_file', self._fail_if_no_file)
+        self._make_backup_before_writing = config_dict.get('make_backup_before_writing',
+                                                           self._make_backup_before_writing)
+        self._backup_filename = config_dict.get('backup_filename', self._backup_filename)
+        self._backup_path = config_dict.get('backup_path', self._backup_path)
+        self._max_backup_number = config_dict.get('max_backup_number', self._max_backup_number)
+        self._encoding = config_dict.get('encoding', self._encoding)
+
+        self._read_path_order = config_dict.get('read_path_order', self._read_path_order)
+        self._read_path_order_dir = config_dict.get('read_path_order_dir', self._read_path_order_dir)
+
+        self._filename = config_dict.get('filename', self._filename)
+
+        if self._filename is None:
+            self._read_filenames = config_dict.get('read_filenames', self._read_filenames)
+            self._write_filename = config_dict.get('write_filename', self._write_filename)
         else:
-            d = "|".join(re.escape(d) for d in delimiters)
-            self._optcre = re.compile(self._OPT_NV_TMPL.format(delim=d), re.VERBOSE)
-
-        self._comment_prefixes = tuple(comment_prefixes or ())
-        self._inline_comment_prefixes = tuple(inline_comment_prefixes or ())
-        self._space_around_delimiters = space_around_delimiters
-        self._strict = strict
-        self._encoding = encoding
-
-        # self._leave_open = leave_open
-        self._create_files = create_files
-        self._fail_if_no_file = fail_if_no_file
-
-        # self._files = None
-        if filename is not None:
-            self._read_filenames = make_list(filename)
-            self._read_path_order = read_path_order
-            self._read_path_order_dir = read_path_order_dir
-            self._write_filename = filename
-        else:
-            self._read_filenames = make_list(read_filenames)
-            self._read_path_order = read_path_order
-            self._read_path_order_dir = read_path_order_dir
-            self._write_filename = write_filename
-
-        self._make_backup_before_writing = make_backup_before_writing
-        self._backup_path = backup_path
-        self._backup_filename = backup_filename
-        self._max_backup_num = max_backup_number
-
-        # self.filenames(filenames)
-
-        super(ConfigFileStorage, self).__init__(**kwargs)
+            self._read_filenames = [self._filename]
+            self._write_filename = self._filename
 
     @property
     def get_default_filename(self):
         tmp_fn = Path(sys.argv[0])
         return tmp_fn.with_suffix('.ini')
-
 
     def read(self, section_name=None, storage_name=storage_name, files=None, encoding=None, **kwargs):
         """
@@ -1185,7 +967,6 @@ class ConfigFileStorage(ConfigStringStorage):
 
         return self.last_section_count, self.last_option_count
 
-
     def _make_backup(self, filename):
         """
         creates a formatted backup filename.
@@ -1203,10 +984,10 @@ class ConfigFileStorage(ConfigStringStorage):
 
         # if the path needs a number, test for it.
         if '*' in backup_filename:
-            num_key = '{:0' + str(len(str(self._max_backup_num))) + '}'
+            num_key = '{:0' + str(len(str(self._max_backup_number))) + '}'
             backup_filename = backup_filename.replace('*', num_key)
 
-            for n in range(self._max_backup_num):
+            for n in range(self._max_backup_number):
                 tmp_filename = backup_filename.format(num=n)
                 test_path = Path(self._backup_path, tmp_filename)
                 if not test_path.exists():
@@ -1263,3 +1044,205 @@ class ConfigFileStorage(ConfigStringStorage):
             exc = ParsingError(fpname)
         exc.append(lineno, repr(line))
         return exc
+
+
+class StorageManagerManager(object):
+    """
+    A class to handle storage managers
+    """
+
+    def __init__(self, config_manager, managers=None, cli_parser_name='cli', cli_manager=None, storage_config=None):
+        """
+        :param config_manager: a link to the ConfigurationManager object
+        :param managers: the managers to be registered.  The first manager passed will be imported as the default
+        :param cli_parser_name: the name of the cli parser if not 'cli', if None, this will disable CLI parsing.
+        :param cli_manager: None uses the standard CLI Parser, this allows replacement of the default cli manager
+        """
+        self.config_manager = config_manager
+        self.storage_managers = {}
+        self.manager_list = []
+        self.default_manager = None
+        set_as_default = True
+        self._storage_config = {}
+
+        if storage_config is not None:
+            self._storage_config = storage_config
+
+        if not isinstance(managers, (list, tuple)):
+            managers = [managers]
+
+        for a in managers:
+            self.register_storage(a, default=set_as_default)
+            set_as_default = False
+
+        if cli_parser_name is not None:
+            if cli_parser_name not in self:
+                if cli_manager is None:
+                    cli_manager = ConfigCLIStorage
+                cli_manager.storage_name = cli_parser_name
+                self.register_storage(cli_manager)
+
+
+    def register_storage(self, storage_manager, default=False):
+        ip.debug('registering storage manager')
+
+        storage_manager = storage_manager()
+        storage_manager.manager = self.config_manager
+        tmp_storage_config = self._storage_config.get(storage_manager.storage_name, dict())
+        storage_manager.config(tmp_storage_config)
+
+        self.storage_managers[storage_manager.storage_name] = storage_manager
+
+        # storage_manager.config(self._storage_config[storage_manager.storage_name])
+
+        if default or self.default_manager is None:
+            self.default_manager = storage_manager
+
+        if storage_manager.standard:
+            self.manager_list.append(storage_manager)
+
+        self._sort_list()
+
+        ip.info('Storage Manager [', storage_manager.storage_name, '] registered')
+
+    def _sort_list(self):
+        self.manager_list.sort(key=lambda x: x.priority)
+
+    def get(self, tag=None):
+        if tag is None:
+            ip.debug('fetching default storage:')
+
+            return self.default_manager
+
+        try:
+            tmp_ret = self.storage_managers[tag]
+            ip.debug('fetching storage for: ', tmp_ret)
+            return tmp_ret
+
+        except KeyError:
+            ip.debug('storage not found for: ', tag)
+
+            raise NoStorageManagerError(tag)
+
+    def get_data(self, tag=None):
+        return self.get(tag).data
+
+    def set_data(self, data, tag=None):
+        self.get(tag).data = data
+
+    def read(self, sections=None, storage_names=None, override_tags=False, data=None):
+        """
+        runs the read from storage process for the selected or configured managers
+
+        :param storage_names: If None, will read from all starnard storage managers, if a string or list, will read from
+            the selected ones following the configured tag settings.
+        :param sections: If None, will read from all sections, if string or list, will read from the selected ones
+            following the configured tag settings.
+        :param override_tags: if True, this will override the configured storage name settings allowing things like
+            exporting the full config etc.
+        :param data: if a single storage name is passed, then data can be passed to that storage manager for saving.
+            this will raise an AssignmentError if data is not None and more than one storage name is passed.
+        """
+
+        tmp_section_count = 0
+        tmp_option_count = 0
+        tmp_storage_manager_count = 0
+
+        tmp_run_list = []
+
+        if storage_names is None:
+            tmp_run_list.extend(self.manager_list)
+        else:
+            storage_names = make_list(storage_names)
+
+            for t in storage_names:
+                tmp_run_list.append(self.get(t))
+
+        if data is not None and tmp_run_list:
+            if len(tmp_run_list) == 1:
+                tmp_run_list[0].data = data
+            else:
+                raise AttributeError('Data cannot be passed when reading from multiple storage managers')
+
+        for s in tmp_run_list:
+            tmp_storage_manager_count += 1
+            if override_tags:
+                use_tag = '*'
+            else:
+                use_tag = s.storage_name
+
+            tsc, toc = s.read(sections, use_tag)
+            tmp_section_count += tsc
+            tmp_option_count += toc
+
+        ip.info('read from storage managers').a()
+        ip.info('sections: ', tmp_section_count)
+        ip.info('options: ', tmp_option_count)
+        ip.info('managers: ', tmp_storage_manager_count).s()
+
+    def write(self, sections=None, storage_names=None, override_tags=False, **kwargs):
+        """
+        runs the write to storage process for the selected or configured managers
+
+        :param storage_names: If None, will write to all starnard storage managers, if a string or list, will write to
+            the selected ones following the configured tag settings.
+        :param sections: If None, will write to all sections, if string or list, will write to the selected ones
+            following the configured tag settings.
+        :param override_tags: if True, this will override the configured storage name settings allowing things like
+            exporting the full config etc.
+        :return: if ONLY one storage_name is passed, this will return the data from that manager if present.
+        """
+
+        tmp_run_list = []
+
+        tmp_section_count = 0
+        tmp_option_count = 0
+        tmp_storage_manager_count = 0
+
+        if storage_names is None:
+            tmp_run_list.extend(self.manager_list)
+        else:
+            storage_names = make_list(storage_names)
+            ip.debug('making a list...').a()
+            ip.debug('registered storages: ', self.storage_managers)
+            for t in storage_names:
+                ip.debug('adding: ', self.storage_managers[t].storage_name)
+
+                tmp_d = self.get(t)
+                ip.debug('test:', tmp_d, ' tag ', t)
+                tmp_run_list.append(self[t])
+
+        ip.s().debug('Storages to write to: ', tmp_run_list)
+        for s in tmp_run_list:
+            tmp_storage_manager_count += 1
+            if override_tags:
+                use_tag = '*'
+            else:
+                use_tag = s.storage_name
+
+            ip.debug('writing to : ', s).a()
+            tsc, toc = s.write(sections, use_tag, **kwargs)
+            ip.s()
+            tmp_section_count += tsc
+            tmp_option_count += toc
+
+        ip.info('write to storage managers').a()
+        ip.info('sections: ', tmp_section_count)
+        ip.info('options: ', tmp_option_count)
+        ip.info('managers: ', tmp_storage_manager_count).s()
+
+        if len(tmp_run_list) == 1:
+            return tmp_run_list[0].data
+        else:
+            return None
+
+    def __call__(self):
+        return self.default_manager
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def __iter__(self):
+        for s in self.manager_list:
+            yield s
+

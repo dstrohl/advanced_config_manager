@@ -127,7 +127,7 @@ from AdvConfigMgr.config_storage import *
 from AdvConfigMgr.config_migrate import ConfigMigrationManager
 from AdvConfigMgr.utils.unset import _UNSET
 from AdvConfigMgr.config_transform import Xform
-from AdvConfigMgr.config_ro_dict import ConfigRODict
+from AdvConfigMgr.config_ro_dict import ConfigDict
 
 from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slugify, get_after, get_before
 import copy
@@ -135,17 +135,17 @@ from distutils.version import StrictVersion, LooseVersion, Version
 
 __all__ = ['ConfigManager', 'ConfigSection', 'ConfigOption']
 
-#: TODO Fix this
+
 class ConfigOption(object):
     def __init__(self, section, name, data_value, *args, **kwargs):
         """
         An individual option in the config
 
         :param ConfigSection section:  A pointer to the ConfigSection object that this is a part of
-        :param str name: The name of the config object.  This is transformed by the optionxform method in the main config
-            manager.  by default this is converted to lowercase
-        :param object default_value: Default= _UNSET the default value for the item. If set to :py:class:`_UNSET` this is
-            considered to not have a default.  (this allows None to be a valid default setting.
+        :param str name: The name of the config object.  This is transformed by the optionxform method in the main
+            config manager.  by default this is converted to lowercase
+        :param object default_value: Default= _UNSET the default value for the item. If set to :py:class:`_UNSET` this
+            is considered to not have a default.  (this allows None to be a valid default setting.
         :param str data_type: Default=None: This is the type of data that is stored in the option.  this accepts : None,
             'str', 'int', 'float', 'list', 'dict' additional data types can be defined using the DataTypeBase class.
             If set to None and there is a default value set, this will take the datatype of the default value,
@@ -160,20 +160,22 @@ class ConfigOption(object):
             string, tuple or dictionary of options that configure how the cli commands will be handled.
         :type cli_option: str or None
         :param object validations: Default=None: This is a set of validation classes to be run for any options saved.
-        :param bool keep_if_empty: Default=True: If set to False the option will be deleted when the value is cleared AND
-            there is no set default value.
+        :param bool keep_if_empty: Default=True: If set to False the option will be deleted when the value is cleared
+            AND there is no set default value.
         :param bool do_not_change: Default=False If set to True, this will not allow the user to change the option after
             initial loading.
         :param bool do_not_delete: Default=False  If set to True, this will not allow the user to delete the option.
-        :param bool required_after_load: Default = False, If set to true, the app should not start without this being set.
-            if there is a CLI_option available, the app should prompt the user for that option, if not, the app should
-            fail with a usefull message.
+        :param bool required_after_load: Default = False, If set to true, the app should not start without this being
+            set. if there is a CLI_option available, the app should prompt the user for that option, if not, the app
+            should fail with a usefull message.
         :param bool autoconvert: will attempt to autoconvert values to the datatype, this can be disabled if needed.
             (some types of data may not autoconvert correctly.)
         """
         self._section = section
-        self._name = self.xf(name)
-        self._data = data_value
+        self._manager = self._section._manager
+
+        junk, self._name = self._xf(name)
+        self._value = data_value
 
         # only exists for IDE happiness.        
         self.default_value = _UNSET
@@ -203,8 +205,10 @@ class ConfigOption(object):
 
         args_handler(self, args, args_list, kwargs)
 
-        self._value = _UNSET
-        self._name = self.section.manager.optionxform(self._name)
+        # self._value = _UNSET
+        section, self._name = self._xf(self._name)
+
+        ip.debug('INIT option: ', self._name).a()
 
         if self.datatype is None:
             if self.default_value is not _UNSET:
@@ -212,15 +216,16 @@ class ConfigOption(object):
             else:
                 self.datatype = 'str'
 
-        self._datatype_manager = data_type_generator(self.datatype)(self.validations)
+        self._datatype_manager = self._manager._data_type_manager(self.datatype)(self.validations)
         self._validator = data_type_generator(self.datatype)(self.validations)
 
         if self.verbose_name is None:
             self.verbose_name = self._name.title()
         if self.do_not_change and self.is_empty:
-            raise NoOptionError(self.name, self.section.name)
+            raise NoOptionError(option=self.name, section=self._section.name)
 
         if self.cli_options is not None:
+            ip.debug('option has CLI settings: ', self.cli_options)
             cli_args = {'dest': self.name}
             if self.description is not None:
                 cli_args['help'] = self.description
@@ -256,9 +261,10 @@ class ConfigOption(object):
                     cli_args['default'] = self.default_value
 
             self.cli_options = cli_args
-            self.section._register_cli(self)
+            self._section._register_cli(self)
 
-        ip.debug('create option: ', self._repr_str)
+        ip.debug('created option: ', self._repr_str).s()
+
 
     def _xf(self, option):
         return self._section._xf(option)
@@ -266,15 +272,9 @@ class ConfigOption(object):
     def _xf_this_sect(self, section):
         return self._section._xf_this_sec(section)
 
-    '''
-    @property
-    def section(self):
-        return self._section
-    '''
-
     @property
     def path(self):
-        return self.section.name + '.' + self.name
+        return self._section.name + '.' + self.name
 
     def validated(self, value):
         return self._datatype_manager(value)
@@ -315,10 +315,11 @@ class ConfigOption(object):
             return self._value
         if self.has_default_value:
             return self.default_value
-        raise EmptyOptionError(self.name, self.section.name)
+        #raise EmptyOptionError(self.name, self._section.name)
+        return _UNSET
 
     @property
-    def has_cli(self):
+    def _has_cli(self):
         if self.cli_options is None:
             return False
         else:
@@ -337,16 +338,14 @@ class ConfigOption(object):
                 ip.debug('setting to _UNSET').s()
 
         if not self.keep_if_empty and not self.has_default_value:
-            self.section.delete(self.name, force=True)
+            self._section.delete(self.name, force=True)
 
     def delete(self):
-        return self.section.delete(self.name)
+        return self._section.delete(self.name)
 
-    def _get(self, interpolater=None, as_string=False):
+    def _get(self, as_string=False):
         """
-        internal use get, assumes that if interpolator is None, no interpolation (this is different from .get in that
-        .get will set the default interpolater unless raw = True
-        :param interpolater:
+        internal use get, does not do interpolation.
         :param as_string:
         :return:
         """
@@ -355,57 +354,41 @@ class ConfigOption(object):
         if as_string:
             tmp_value = self._datatype_manager.to_string(tmp_value)
 
-        if interpolater is not None:
-            tmp_value = interpolater(self.section.manager, self.section.name, tmp_value)
-
         ip.debug('get option [', self.path, '], returning ', tmp_value)
 
         return tmp_value
 
-    def get(self, raw=False, interpolater=None):
+    def get(self, raw=False, as_string=False):
         """
         Gets the current value or default interpolated value.
 
         :param raw: if set to True will bypass the interpolater
-        :param interpolater: can be used to override the default interpolater if needed.
         :return: the interpolated value or default value.
         """
-        if raw:
-            return self._get()
+        tmp_ret = self._get(as_string=as_string)
+        if not raw:
+            tmp_ret = self._manager._interpolator.before_get(self._section.name, tmp_ret)
+        return tmp_ret
 
-        if interpolater is None:
-            interpolater = self.section.manager._interpolation.before_get
-        else:
-            interpolater = interpolater.before_get
-
-        return self._get(interpolater)
-
-    def to_write(self, raw=False, interpolater=None, as_string=False):
+    def to_write(self, raw=False, as_string=False):
         """
         gets data from the system to save to a storage module,
 
         :param raw: if set to True will bypass the interpolater
-        :param interpolater: can be used to override the default interpolater if needed.
         :return: the interpolated value or default value.
         :param as_string: returns the value as a strong (passing through the datatype module to_string method)
         :return: the interpolated value or default value.
         """
-        if raw:
-            return self._get(as_string=as_string)
+        tmp_ret = self._get(as_string=as_string)
+        if not raw:
+            tmp_ret = self._manager._interpolator.before_write(self._section.name, tmp_ret)
+        return tmp_ret
 
-        if interpolater is None:
-            interpolater = self.section.manager._interpolation.before_write
-        else:
-            interpolater = interpolater.before_write
-
-        return self._get(interpolater=interpolater, as_string=as_string)
-
-    def _set(self, value, interpolater=None, validate=True, force=False, from_string=False):
+    def _set(self, value, validate=True, force=False, from_string=False):
         """
         internal use set, assumes that if interpolator is None, no interpolation (this is different from .get in that
         .get will set the default interpolater unless raw = True
 
-        :param interpolater:
         :param validate:
         :param force: will skip lock checks
         :param from_string: will force conversion from string
@@ -416,9 +399,6 @@ class ConfigOption(object):
             value = self._datatype_manager.auto_convert(value)
         elif from_string:
             value = self._datatype_manager.from_string(value)
-
-        if interpolater is not None:
-            value = interpolater(self.section.manager, self.section.name, value)
 
         if value != self._value:
 
@@ -433,60 +413,48 @@ class ConfigOption(object):
 
                 self._value = value
                 ip.debug('set option [', self.path, '], to ', value)
-
             else:
-                if self.section.manager._raise_error_on_locked_edit:
+                if self._manager._raise_error_on_locked_edit:
                     raise ForbiddenActionError('Change attempted on locked option [%s]' % self.name)
                 ip.debug('option [', self.path, '], is locked')
-
         else:
             ip.debug('option [', self.path, '], already set to ', value)
 
         return value
 
-    def set(self, value, raw=False, interpolater=None, validate=True, force=False):
+    def set(self, value, raw=False, validate=True, force=False):
         """
         Sets the current value.
 
         :param value: the value to set
         :param raw: if set to True will bypass the interpolater
-        :param interpolater: can be used to override the default interpolater if needed.
         :param validate: if False will bypass the validation steps
         :param force: if True will bypass the lock checks
         :return: the interpolated value or default value.
         """
-
-        if raw:
-            return self._set(value, validate=validate, force=force)
-
-        if interpolater is None:
-            interpolater = self.section.manager._interpolation.before_set
+        if not raw:
+            tmp_ret = self._manager._interpolator.before_set(self._section.name, value)
         else:
-            interpolater = interpolater.before_set
+            tmp_ret = value
 
-        return self._set(value, interpolater=interpolater, validate=validate, force=force)
+        return self._set(tmp_ret, validate=validate, force=force)
 
-    def from_read(self, value, raw=False, interpolater=None, validate=True, from_string=False):
+    def from_read(self, value, raw=False, validate=True, from_string=False):
         """
         adds data from a storage module to the system, this ignores the 'do_not_add' flag.
 
         :param value: the value to add
         :param raw: if set to True will bypass the interpolater
-        :param interpolater: can be used to override the default interpolater if needed.
         :param validate: if False will bypass the validation steps
         :param from_string: if True will convert from string
         :return: the interpolated value or default value.
         """
-
-        if raw:
-            return self._set(value, validate=validate, force=True, from_string=from_string)
-
-        if interpolater is None:
-            interpolater = self.section.manager._interpolation.before_read
+        if not raw:
+            tmp_ret = self._manager._interpolator.before_write(self._section.name, value)
         else:
-            interpolater = interpolater.before_read
+            tmp_ret = value
 
-        return self._set(value, interpolater=interpolater, validate=validate, force=True, from_string=from_string)
+        return self._set(tmp_ret, validate=validate, force=True, from_string=from_string)
 
     def __len__(self):
         return len(self.value)
@@ -497,10 +465,10 @@ class ConfigOption(object):
         return self.get()
 
     def __contains__(self, item):
-        return item in self.options
+        return item in self.value
 
     def __str__(self):
-        return self.name
+        return str(self.value)
 
     @property
     def _repr_str(self):
@@ -533,7 +501,8 @@ class ConfigSection(object):
                  cli_section_desc=None,
                  version=None,
                  version_option_name=None,
-                 version_migrations=None):
+                 version_migrations=None,
+                 options=None):
         """
         :param ConfigManager manager: A pointer to the config manager
         :param str name: The name of the section
@@ -563,9 +532,11 @@ class ConfigSection(object):
         self._manager = manager
 
         self._data_dict = data_dict
-        #: TODO add new recs from data_dict if allowed
 
-        self._name = self._xf(name)
+        if name is None:
+            raise AttributeError('Section must have a name')
+
+        self._name, junk = self._manager._xf(name)
 
         if verbose_name is None:
             self.verbose_name = name.title()
@@ -631,6 +602,9 @@ class ConfigSection(object):
         else:
             self._migrations = None
 
+        if options is not None:
+            self.add(options, force_load=True)
+
     def _debug_(self):
         # ip.toggle_silent(False)
         ip.debug('DEBUG DUMP FOR CONFIG SECTION').a(2)
@@ -685,18 +659,19 @@ class ConfigSection(object):
     @property
     def _data(self):
         if self._manager._lockable_data_dict:
-            self._data_dict._editable = True
+            ip.debug('Section data dictionary is lockable, unlocking')
+            self._manager._data_dict._editable = True
         return self._data_dict
 
     def _data_lock(self):
+        ip.debug('Section data dictionary is lockable, unlocking')
         self._manager._data_lock()
 
-
     def _xf(self, option):
-        return self._manager._xform.both(option, option_or_section='option')
+        return self._manager._xform.both(option, option_or_section='option', section=self._name)
 
     def _xf_this_sec(self, section):
-        return section is _UNSET and section == self.name
+        return section is _UNSET or section == self.name or section is None
 
     def get(self, option, fallback=_UNSET, raw=False):
         """
@@ -792,6 +767,9 @@ class ConfigSection(object):
             return self._options[option].to_write(raw=raw, as_string=as_string)
         else:
             return self._manager[section].to_write(option, raw=raw, as_string=as_string)
+
+    def option(self, option):
+        return self.item(option)
 
     def item(self, option):
         section, option = self._xf(option)
@@ -910,8 +888,9 @@ class ConfigSection(object):
         return tmp_ret
 
     def _register_cli(self, option):
-        if self._manager._cli_parser_name is not None:
-            self._manager.storage.get(self._manager._cli_parser_name).reset_cache()
+        ip.a().debug('Registering CLI Option on load: ', option.name)
+        if self._manager._default_cli_name is not None:
+            self._manager.storage.get(self._manager._default_cli_name).reset_cache()
             tmp_args = option.cli_options
             tmp_dest = option.cli_options['dest']
             tmp_flags = make_list(tmp_args['flags'])
@@ -922,6 +901,7 @@ class ConfigSection(object):
 
             self._cli_args[tmp_dest] = tmp_args
             self._manager._cli_args[tmp_dest] = option
+        ip.s()
 
     def load(self, option, value, *args, **kwargs):
         """
@@ -1007,6 +987,7 @@ class ConfigSection(object):
             * if there are existing options in the section with the same name, an error will be raised.
         """
         tmp_options = []
+        force_load = kwargs.pop('force_load', False)
         if args:
             for arg in args:
                 if isinstance(arg, (str, dict)):
@@ -1036,11 +1017,11 @@ class ConfigSection(object):
             if isinstance(o, dict):
                 try:
                     name = o.pop('name')
-                    self._add(name, **o)
+                    self._add(name, force_load=force_load, **o)
                 except KeyError:
                     raise AttributeError('config parameter dict does not contain "name"')
             elif isinstance(o, str):
-                self._add(o)
+                self._add(o, force_load=force_load)
 
     def _add(self, name, *args, **kwargs):
         """
@@ -1053,7 +1034,7 @@ class ConfigSection(object):
         with_defaults = copy.copy(self.option_defaults)
         with_defaults.update(kwargs)
 
-        force = kwargs.pop('force_load')
+        force = kwargs.pop('force_load', False)
 
         if self.locked and not force:
             raise LockedSectionError(section=self._name)
@@ -1064,8 +1045,9 @@ class ConfigSection(object):
 
         section, option = self._xf(name)
         if self._xf_this_sec(section):
-            tmp_data_rec = self._data.add(option)
+            tmp_data_rec = self._data.add(option, _UNSET)
             self._options[option] = ConfigOption(self, option, tmp_data_rec, *args, **with_defaults)
+            self._data_lock()
         else:
             if force:
                 kwargs['force_load'] = True
@@ -1165,7 +1147,10 @@ class ConfigManager(object):
     _DEFAULT_OPTION_CLASS = ConfigOption
     _DEFAULT_MIGRATION_CLASS = ConfigMigrationManager
     _DEFAULT_VERSION_MANAGER_CLASS = LooseVersion
-    _DEFAULT_DATA_DICT = ConfigRODict
+    _DEFAULT_DATA_DICT = ConfigDict
+    _DEFAULT_DATA_TYPE_MANAGER = DataTypeGenerator
+    _DEFAULT_DATA_TYPES = (DataTypeInt, DataTypeDict, DataTypeBoolean,
+                           DataTypeFloat, DataTypeList, DataTypeStr)
 
     # Storgae Options
     _default_cli_name = 'cli'
@@ -1196,7 +1181,16 @@ class ConfigManager(object):
     # allow_no_value = False
     # empty_lines_in_values = True
 
-    def __init__(self, data_dict=None, version=None, migrations=None):
+    def __init__(self, data_dict=None, version=None, migrations=None, storage_config=None):
+        """
+
+        :param ConfigDict data_dict: any dictionary that can support the number of levels needed.
+        :param str version: the sering version number.
+        :param list migrations: a list of migration dictionaries.
+        :param dict storage_config: a dictionary of storage configuration dictionaries.  These woudl be in the format
+            of {'storage_name':{<config_dict>},'storage_name':{<config_dict>}}.  See specific storage managers for
+            details of the config dict entries.
+        """
 
         if self._no_sections:
             self._section_option_sep = None
@@ -1206,10 +1200,14 @@ class ConfigManager(object):
         self._xform = self._DEFAULT_XFORM(self._section_option_sep)
         self._interpolator = self._DEFAULT_INTERPOLATION(self, self._xform, sep=self._section_option_sep)
 
+        self._data_type_manager = self._DEFAULT_DATA_TYPE_MANAGER(*self._DEFAULT_DATA_TYPES)
+
         if data_dict is None:
             self._data_dict = self._DEFAULT_DATA_DICT(self)
+        else:
+            self._data_dict = data_dict
 
-        if issubclass(self._data_dict, self._DEFAULT_DATA_DICT):
+        if issubclass(type(self._data_dict), self._DEFAULT_DATA_DICT):
             self._lockable_data_dict = True
             self._data_dict._interpolator = self._interpolator
             self._data_dict._xform = self._xform
@@ -1233,7 +1231,9 @@ class ConfigManager(object):
         self._cli_args = {}
 
         self._storage = self._DEFAULT_STORAGE_MANAGER(self, self._DEFAULT_STORAGE_PLUGINS,
-                                                      cli_parser_name=self._default_cli_name)
+                                                      cli_manager=self._DEFAULT_CLI_MANAGER,
+                                                      cli_parser_name=self._default_cli_name,
+                                                      storage_config=storage_config)
 
         if migrations is None:
             self._migrations = []
@@ -1241,7 +1241,7 @@ class ConfigManager(object):
             self._migrations = migrations
 
         if self._no_sections:
-            self.add_section(self._DEFAULT_SECT_NAME, force_add_default=True)
+            self.add_section(self._no_section_section_name, force_add_default=True)
 
     def _debug_(self):
         ip.si(False)
@@ -1285,8 +1285,8 @@ class ConfigManager(object):
         ip.debug('Migration Managers : ', self._migrations)
         ip.s(2)
 
-    def _xf(self, section):
-        return self._xform.both(section, option_or_section='section')
+    def _xf(self, section, option=_UNSET):
+        return self._xform.both(section, option_or_section='section', option=option)
 
     @property
     def version(self):
@@ -1307,7 +1307,7 @@ class ConfigManager(object):
     def get_sec_migrations(self, section):
         tmp_ret = []
         for m in self._migrations:
-            tmp_section = self.sectionxform(m['section_name'])
+            tmp_section, tmp_option = self._xf(m['section_name'])
             if tmp_section == section:
                 tmp_ret.append(m)
         return tmp_ret
@@ -1325,11 +1325,13 @@ class ConfigManager(object):
     def _data(self):
         if self._lockable_data_dict:
             self._data_dict._editable = True
+            ip.debug('Base data dictionary is lockable, unlocking')
         return self._data_dict
 
     def _data_lock(self):
         if self._lockable_data_dict:
             self._data_dict._editable = False
+            ip.debug('Base data dictionary is lockable, locking')
 
     def add_section(self, section, force_add_default=False, **kwargs):
         """Create a new section in the configuration.
@@ -1387,7 +1389,7 @@ class ConfigManager(object):
         """
 
         if self._no_sections:
-            return self._sections[self._DEFAULT_SECT_NAME].add(*args, **kwargs)
+            return self._sections[self._no_section_section_name].add(*args, **kwargs)
 
         tmp_sections = []
         if args:
@@ -1431,33 +1433,6 @@ class ConfigManager(object):
 
                 self.add_section(s)
 
-    '''
-    def has_section(self, section):
-        """Indicate whether the named section is present in the configuration.
-        """
-        if self._no_sections:
-            raise SimpleConfigError(section)
-
-        return self.sectionxform(section) in self._sections
-    '''
-    '''
-    def optionxform(self, optionstr, extra_allowed='_'):
-        """
-        Will transform the option name string as needed, by default this will slugify and lowercase the string.
-
-        This can be overridden as desired.
-        """
-        return slugify(optionstr, extra_allowed, 'lower', punct_replace='_')
-
-    def sectionxform(self, sectionstr, extra_allowed='_'):
-        """
-        Will transform the section name string as needed, by default this will slugify and uppercase the string.
-
-        This can be overridden as desired.
-        """
-        return slugify(sectionstr, extra_allowed, 'upper', punct_replace='_')
-    '''
-
     # ****************************************************************************************************************
     # **                Storage Methods
     # ****************************************************************************************************************
@@ -1497,7 +1472,7 @@ class ConfigManager(object):
                           **kwargs)
 
     # ****************************************************************************************************************
-    # **                Magic Methods
+    # **     ConfigManager Magic Methods
     # ****************************************************************************************************************
 
     def __getitem__(self, key):
@@ -1521,23 +1496,22 @@ class ConfigManager(object):
     def __setitem__(self, key, value):
         if self._no_sections:
             self._sections[self._no_section_section_name][key] = value
-
-        section, option = self._xf(key)
-
-        if option is _UNSET:
-            if key in self:
-                raise AttributeError('sections may not be edited using this approach')
-            else:
-                if isinstance(value, dict):
-                    self.add_section(key, **value)
-                else:
-                    raise AttributeError('sections added this way must use a dictionary for options')
         else:
-            if section not in self:
-                self.add_section(section)
+            section, option = self._xf(key)
 
-            self[section][option] = value
+            if option is _UNSET:
+                if key in self:
+                    raise AttributeError('sections may not be edited using this approach')
+                else:
+                    if isinstance(value, dict):
+                        self.add_section(key, **value)
+                    else:
+                        raise AttributeError('sections added this way must use a dictionary for options')
+            else:
+                if section not in self:
+                    self.add_section(section)
 
+                self[section][option] = value
 
     def __contains__(self, key):
         if self._no_sections:
@@ -1552,7 +1526,6 @@ class ConfigManager(object):
                 return option in self._sections[section]
             except KeyError:
                 raise NoSectionError(section=section)
-
 
     def __len__(self):
         if self._no_sections:

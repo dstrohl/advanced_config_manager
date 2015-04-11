@@ -69,60 +69,75 @@ class Xform(object):
     def is_dot_notation(self, name):
         if self._sec_opt_sep is not None and self._sec_opt_sep in name:
             return True
-        if self._sec_opt_sep is None and self._sec_opt_sep in name:
-            msg = 'Dot Notation disabled : {}'.format(name)
-            raise AttributeError(msg)
         return False
 
     def full(self, name=_UNSET, extra_allowed=None, glob=False,
              option_or_section='option', section=_UNSET, option=_UNSET):
-        tmp_check, tmp_section, tmp_option = self.full_both(name, extra_allowed=extra_allowed, glob=glob,
+        tmp_check, tmp_section, tmp_option = self.both_check(name, extra_allowed=extra_allowed, glob=glob,
                                                             option_or_section=option_or_section, section=section,
                                                             option=option)
-        return '{}.{}'.format(tmp_section, tmp_option)
+        if tmp_section is None or tmp_option is None:
+            tmp_ret = None
+            if tmp_section is None:
+                tmp_ret = tmp_option
+            elif tmp_option is None:
+                tmp_ret = tmp_section
+            return tmp_ret
+        else:
+            return '{}.{}'.format(tmp_section, tmp_option)
 
     def full_check(self, name=_UNSET, extra_allowed=None, glob=False,
                    option_or_section='option', section=_UNSET, option=_UNSET):
 
-        tmp_check, tmp_section, tmp_option = self.full_both(name, extra_allowed=extra_allowed, glob=glob,
-                                                            option_or_section=option_or_section,
-                                                            section=section, option=option)
+        tmp_check, tmp_section, tmp_option = self.both_check(name, extra_allowed=extra_allowed, glob=glob,
+                                                             option_or_section=option_or_section,
+                                                             section=section, option=option)
 
-        return tmp_check, '{}.{}'.format(tmp_section, tmp_option)
+        if tmp_section is None or tmp_option is None or tmp_section is _UNSET or tmp_option is _UNSET:
+            tmp_ret = None
+            if tmp_section is None or tmp_section is _UNSET:
+                tmp_ret = tmp_option
+            elif tmp_option is None or tmp_option is _UNSET:
+                tmp_ret = tmp_section
+            return tmp_check, tmp_ret
+        else:
+            return tmp_check, '{}.{}'.format(tmp_section, tmp_option)
 
     def both(self, name=_UNSET, extra_allowed=None, glob=False,
-                   option_or_section='option', section=_UNSET, option=_UNSET):
+             option_or_section='option', section=_UNSET, option=_UNSET):
 
-        tmp_check, tmp_section, tmp_option = self.full_both(name, extra_allowed=extra_allowed, glob=glob,
-                                                            option_or_section=option_or_section,
-                                                            section=section, option=option)
+        tmp_check, tmp_section, tmp_option = self.both_check(name, extra_allowed=extra_allowed, glob=glob,
+                                                             option_or_section=option_or_section,
+                                                             section=section, option=option)
         return tmp_section, tmp_option
 
     def both_check(self, name=_UNSET, extra_allowed=None, glob=False,
                    option_or_section='option', section=_UNSET, option=_UNSET):
 
         tmp_check = False
-        if name is None:
-            return None, None
 
         if option_or_section == 'option':
+            if name is None:
+                return False, _UNSET, None
             tmp_option = self.option(name, extra_allowed=extra_allowed, glob=glob)
             tmp_section = self.section()
             if tmp_section is _UNSET:
                 if section is not _UNSET:
                     tmp_section = self.section(section, extra_allowed=extra_allowed, glob=glob)
                 else:
-                    return False, None, tmp_option
+                    return False, _UNSET, tmp_option
             else:
                 tmp_check = True
         else:
+            if name is None:
+                return False, None, _UNSET
             tmp_section = self.section(name, extra_allowed=extra_allowed, glob=glob)
             tmp_option = self.option()
             if tmp_option is _UNSET:
                 if option is not _UNSET:
                     tmp_option = self.option(option, extra_allowed=extra_allowed, glob=glob)
                 else:
-                    return False, None, tmp_section
+                    return False, tmp_section, _UNSET
             else:
                 tmp_check = True
 

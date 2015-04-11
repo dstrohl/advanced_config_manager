@@ -1,5 +1,5 @@
 __author__ = 'dstrohl'
-__all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataTypeDict',
+__all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataTypeDict', 'DataTypeBoolean',
            'DataTypeGenerator', 'data_type_generator']
 
 import ast

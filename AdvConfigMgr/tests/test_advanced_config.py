@@ -5,6 +5,7 @@ import copy
 from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager, ip
 from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
 from AdvConfigMgr.config_storage import ConfigSimpleDictStorage
+from AdvConfigMgr.config_ro_dict import ConfigDict
 
 from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
     DataTypeList, DataTypeStr, _UNSET
@@ -146,6 +147,10 @@ class TestConfigOption(unittest.TestCase):
 
 '''
 
+
+class NoSectConfigManager(ConfigManager):
+    _no_sections = True
+
 class TestConfigManager(unittest.TestCase):
 
     def setUp(self):
@@ -243,8 +248,8 @@ class TestConfigManager(unittest.TestCase):
               option4=self.od_int2_do_not_delete,
               option5='opt5')
 
+        ip.si(False)
         ip('TEST: Starting test ', self.id()).ms('test').a()
-
 
     def tearDown(self):
         ip.mr('test').lp('TEST: Ending test ', self.id())
@@ -280,7 +285,7 @@ class TestConfigManager(unittest.TestCase):
     def test_invalid_type(self):
         s = self.c['section1']
         s.add('option1')
-        s.options['option1'].autoconvert=False
+        s.option('option1').autoconvert=False
         with self.assertRaises(ValidationError):
             s['option1'] = 1
 
@@ -311,7 +316,7 @@ class TestConfigManager(unittest.TestCase):
         s.clear(['option2', 'option1'])
 
         self.assertEqual(s['option2'], 'test2')
-        self.assertEqual(s.options['option1'].is_empty, True)
+        self.assertEqual(s.item('option1').is_empty, True)
 
     def test_delete_options(self):
         s = self.c['section1']
@@ -451,12 +456,11 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(s['test2'], False)
         self.assertEqual(s['test3'], 'test')
 
-
     def test_simple_config(self):
 
-        ip.si(False)
+        #ip.si(False)
 
-        c = ConfigManager(no_sections=True)
+        c = NoSectConfigManager()
         c.add(option1='test')
 
         self.assertEqual(c['option1'], 'test')
@@ -470,12 +474,12 @@ class TestConfigManager(unittest.TestCase):
     def test_dict_manager(self):
         self.c['section2'].storage_write_to = 'dict'
         self.c['section2']['option2'] = 'test'
-        self.c.storage.register_storage(ConfigSimpleDictStorage())
+        self.c.storage.register_storage(ConfigSimpleDictStorage)
         tmp_dict = self.c.write(storage_names='dict')
         tmp_ret_1 = {'SECTION2': {'option2': 'test'}}
 
-        ip.si(False)
-        ip.debug('TMP_DICT   : ', tmp_dict)
+        #ip.si(False)
+        #ip.debug('TMP_DICT   : ', tmp_dict)
 
         self.assertEqual(tmp_dict, tmp_ret_1)
 
@@ -483,11 +487,10 @@ class TestConfigManager(unittest.TestCase):
         self.c['section2'].storage_write_to = 'dict'
         self.c['section2'].store_default = True
         self.c['section2']['option2'] = 'test'
-        self.c.storage.register_storage(ConfigSimpleDictStorage())
+        self.c.storage.register_storage(ConfigSimpleDictStorage)
         tmp_dict = self.c.write(storage_names='dict')
         tmp_ret_1 = {'SECTION_STD': {}, 'SECTION_LOCKED': {}, 'SECTION_DISALLOW_CREATE': {}, 'SECTION2': {'option3': 'opt3', 'od_int1_do_not_change': 1, 'od_string2_default': 'default_od_string', 'option5': 'opt5', 'option2': 'test'}}
         print(tmp_dict)
-
 
     def test_seg_opt_sep(self):
         c = ConfigManager()
@@ -499,7 +502,7 @@ class TestConfigManager(unittest.TestCase):
         c['section2'] = dict(description='hello world')
         self.assertEqual(c['section2'].description, 'hello world')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             c['section3'] = 'testing'
 
         with self.assertRaises(AttributeError):
@@ -509,12 +512,25 @@ class TestConfigManager(unittest.TestCase):
         self.assertIn('section1.option1', c)
         self.assertNotIn('section1.option4', c)
 
-
     def test_debug(self):
         c = ConfigManager()
         c.add('section1')
         c['section1']._debug_()
         c._debug_()
+
+    def test_normal_dict(self):
+        test_dict = ConfigDict()
+
+        c = ConfigManager(data_dict=test_dict)
+
+        c.add('section1')
+        c['section1']['option1'] = "test"
+
+        self.assertEqual(c['section1.option1'], 'test')
+        self.assertEqual(test_dict['section1']['option1'], 'test')
+
+
+
 
 """
 Tests to run:

@@ -21,6 +21,17 @@ class TestClass(object):
     def __str__(self):
         return self.t
 
+class DictCfgManager(ConfigManager):
+    _DEFAULT_STORAGE_PLUGINS = (ConfigSimpleDictStorage, ConfigCLIStorage)
+
+
+class FileCfgManager(ConfigManager):
+    _DEFAULT_STORAGE_PLUGINS = (ConfigFileStorage, ConfigCLIStorage)
+
+class StringCfgManager(ConfigManager):
+    _DEFAULT_STORAGE_PLUGINS = (ConfigStringStorage, ConfigCLIStorage)
+
+
 class TestConfigManager(unittest.TestCase):
     '''
     def setUp(self):
@@ -151,7 +162,7 @@ class TestConfigManager(unittest.TestCase):
             'option2=opt2',
             'option3=opt3']
 
-        c = ConfigManager(storage_managers=ConfigStringStorage())
+        c = StringCfgManager()
 
         c.add_section('Section1')
 
@@ -163,7 +174,7 @@ class TestConfigManager(unittest.TestCase):
 
     def test_save_list(self):
 
-        c = ConfigManager(storage_managers=ConfigStringStorage())
+        c = StringCfgManager()
 
         c.add_section('Section1')
 
@@ -179,7 +190,7 @@ class TestConfigManager(unittest.TestCase):
         test_dict = {'section1': {'option1': 'opt1',
                                  'option2': 'opt2'}}
 
-        c = ConfigManager(storage_managers=ConfigSimpleDictStorage())
+        c = DictCfgManager()
 
         c.add_section('Section1')
 
@@ -191,7 +202,7 @@ class TestConfigManager(unittest.TestCase):
 
     def test_save_dict(self):
 
-        c = ConfigManager(storage_managers=ConfigSimpleDictStorage())
+        c = DictCfgManager()
 
         c.add_section('Section1')
 
@@ -204,14 +215,16 @@ class TestConfigManager(unittest.TestCase):
     def test_save_file(self):
         tmp_filename = Path(self.tmp_ini_path, 'test_ini_file.ini')
 
-        c = ConfigManager(storage_managers=ConfigFileStorage(filename=tmp_filename))
-        d = ConfigManager(storage_managers=ConfigFileStorage(filename=tmp_filename))
+        tmp_filename_dict = {'file': {'filename': tmp_filename}}
+
+        c = FileCfgManager(storage_config=tmp_filename_dict)
+        d = FileCfgManager(storage_config=tmp_filename_dict)
 
         c.add_section('Section1')
 
         c['section1']['option1'] = 'test'
 
-        tmp_list = c.write(storage_names='file')
+        c.write(storage_names='file')
 
         d.add_section('Section1')
 
@@ -224,7 +237,9 @@ class TestConfigManager(unittest.TestCase):
     def test_load_file(self):
         tmp_filename = Path(self.tmp_ini_path, 'test_ini_read_file.ini')
 
-        c = ConfigManager(storage_managers=ConfigFileStorage(filename=tmp_filename))
+        tmp_filename_dict = {'file': {'filename': tmp_filename}}
+
+        c = FileCfgManager(storage_config=tmp_filename_dict)
 
         c.add_section('Section1')
         c.add_section('section2')
@@ -235,3 +250,4 @@ class TestConfigManager(unittest.TestCase):
 
         self.assertEqual(c['section1']['option2'], 'this')
         self.assertEqual(c['section2']['option4'], 'again')
+

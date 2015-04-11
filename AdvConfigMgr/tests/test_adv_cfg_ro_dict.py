@@ -2,9 +2,12 @@ __author__ = 'dstrohl'
 
 
 import unittest
-from AdvConfigMgr.config_ro_dict import ConfigRODict
+from AdvConfigMgr.config_ro_dict import ConfigDict
 from AdvConfigMgr.config_interpolation import Interpolation
 from AdvConfigMgr.config_exceptions import NoSectionError, LockedSectionError
+from AdvConfigMgr.config_transform import Xform
+
+xf = Xform()
 
 
 class TestRODict(unittest.TestCase):
@@ -12,11 +15,11 @@ class TestRODict(unittest.TestCase):
     test_dict = {'section1': {'option1': 'opt1', 'option2': 'opt2'},
                  'section2': {'option3': 'opt3', 'option4': '%(option3)'},
                  'section3': {'OpTiOn5': '%(section1.option1)-%(section2.option4)'}}
-    c = ConfigRODict(test_dict)
-    c._interpolator = Interpolation(c)
+    c = ConfigDict(test_dict)
+    c._interpolator = Interpolation(c, xf)
 
     def test_build_read(self):
-        c = ConfigRODict(self.test_dict)
+        c = ConfigDict(self.test_dict)
         s2 = c['section2']
 
         self.assertEqual(c['section1']['option1'], 'opt1')
@@ -29,8 +32,8 @@ class TestRODict(unittest.TestCase):
 
     def test_interpolation(self):
 
-        c = ConfigRODict(self.test_dict)
-        c._interpolator = Interpolation(c)
+        c = ConfigDict(self.test_dict)
+        c._interpolator = Interpolation(c, xf)
         s2 = c['section2']
 
         self.assertEqual(s2['option4'], 'opt3')
@@ -42,7 +45,7 @@ class TestRODict(unittest.TestCase):
         self.assertEqual(len(self.c['section1']), 2)
 
     def test_raise(self):
-        c = ConfigRODict(self.test_dict)
+        c = ConfigDict(self.test_dict)
         c._raise_on_does_not_exist = True
 
         with self.assertRaises(NoSectionError):
@@ -85,7 +88,7 @@ class TestRODict(unittest.TestCase):
         self.assertNotIn('section5', self.c)
 
     def test_set_item(self):
-        c = ConfigRODict(self.test_dict)
+        c = ConfigDict(self.test_dict)
         c._editable = True
 
         c['section1']['option1'] = 'opt2'
@@ -98,7 +101,7 @@ class TestRODict(unittest.TestCase):
         self.assertEqual(c['section2.option3'], 'opt33')
 
     def test_del_item(self):
-        c = ConfigRODict(self.test_dict)
+        c = ConfigDict(self.test_dict)
         c._editable = True
 
         del c['section1']['option1']

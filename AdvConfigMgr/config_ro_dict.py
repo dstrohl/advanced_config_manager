@@ -1,17 +1,17 @@
 __author__ = 'dstrohl'
 
-__all__ = ['ConfigRODict']
+__all__ = ['ConfigDict']
 
 
 from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, LockedSectionError
 from AdvConfigMgr.utils.unset import _UNSET
 from AdvConfigMgr.config_transform import Xform
 
-class ConfigROSectionDict(object):
+class ConfigSectionDict(object):
 
     def __init__(self, base_dict, name, options=None):
         """
-        :type base_dict: ConfigRODict
+        :type base_dict: ConfigDict
         """
 
         self._base_dict = base_dict
@@ -113,7 +113,7 @@ class ConfigROSectionDict(object):
         return msg
 
 
-class ConfigRODict(object):
+class ConfigDict(object):
 
     def __init__(self, import_dict=None):
         self._section_dict = {}
@@ -135,7 +135,7 @@ class ConfigRODict(object):
     def _add(self, section, options=None):
         if self.editable:
             section = self._xf(section)
-            self._section_dict[section] = ConfigROSectionDict(self, section, options)
+            self._section_dict[section] = ConfigSectionDict(self, section, options)
             return self._section_dict[section]
 
     def add(self, sections, options=None):
@@ -180,7 +180,10 @@ class ConfigRODict(object):
             section = self._xf(section)
             option = self._xform.option()
             if option is _UNSET:
-                raise AttributeError('Sections must be added using ".add"')
+                if value is _UNSET:
+                    self.add(section)
+                else:
+                    raise AttributeError('Sections must be added using ".add"')
             else:
                 if section in self:
                     self._section_dict[section][option] = value
