@@ -17,27 +17,7 @@ __all__ = ['BaseConfigStorageManager', 'StorageManagerManager', 'ConfigCLIStorag
 
 class BaseConfigStorageManager(object):
     """
-    :param str storage_name: The internal name of the storage manager, must be unique
-    :param bool allow_create: True if this can create options in the system, even if they are not pre-configured.
-    :param bool standard:  True if this should be used for read_all/write_all ops
-    :param bool force:True if this will set options even if they are locked
-    :param bool overwrite: True if this will overwrite options that have existing values
-    :param bool lock_after_read: True if this will lock the option after reading
-    :param int priority: the priority of this manager, with smallest being run earlier than larger.
-\
-    Base class for storage managers, efines an expandable storage subsystem for configs
-
-    at a minimum, any sub classes should define the following initial values:
-
-    storage_type_name:
-        (str) This is the name of the manager class, it is used in log entries and potentially UI's.
-
-    storage_name:
-        (str) This is the default name of the manager, it is used when selecting which manager to use.
-
-    force_strings:
-        (bool) If True, the system will convert all options to strings before writing to the manager, and from strings
-        when reading from it.
+    Base class for storage managers, efines an expandable storage subsystem for configs.
 
     Also, the two methods; BaseConfigStorageManager.read() and BaseConfigStorageManager.write() need to be overwritten
     to read and write the data in the format needed.
@@ -49,18 +29,42 @@ class BaseConfigStorageManager(object):
 
     """
 
+    """:param str storage_type_name: This is the name of the manager class, it is used in log entries and
+        potentially UI's."""
     storage_type_name = 'Base'
+
+    """:param str storage_name: The internal name of the storage manager, must be unique"""
     storage_name = None
+
+    """
+    :param bool force_strings: If True, the system will convert all options to strings before writing to the manager,
+        and from strings when reading from it.
+
+    """
     force_strings = False
+
+    """:param bool standard:  True if this should be used for read_all or write_all ops"""
     standard = True
+
+    """:param bool allow_create: True if this can create options in the system, even if they are not pre-configured."""
     allow_create = True
+
+    """:param bool force: True if this will set options even if they are locked"""
     force = False
+
+    """:param bool overwrite: True if this will overwrite options that have existing values"""
     overwrite = True
+
+    """:param bool lock_after_read: True if this will lock the option after reading"""
     lock_after_read = False
 
+    """:param int priority: the priority of this manager, with smallest being run earlier than larger."""
     priority = 100
 
     def __init__(self):
+        """
+
+        """
 
         """:type self.manager: AdvConfigMgr.advconfigmgr.ConfigManager  """
         self.manager = None  # this is set during registration.
@@ -111,7 +115,7 @@ class BaseConfigStorageManager(object):
 
         You shoudl keep track of the number of sections and options written/read and return these at the end::
 
-        return self.last_section_count, self.last_option_count
+            return self.last_section_count, self.last_option_count
         """
         raise NotImplementedError
 
@@ -135,7 +139,7 @@ class BaseConfigStorageManager(object):
 
         you shoudl keep track of the number of sections and options written/read and return these at the end::
 
-        return self.last_section_count, self.last_option_count
+            return self.last_section_count, self.last_option_count
         """
         raise NotImplementedError
 
@@ -842,11 +846,13 @@ class ConfigFileStorage(ConfigStringStorage):
     :param bool strict: if False, duplicate sections will be merged, if True, duplicate sections will raise an error
     :param read_filenames: a filename or list of file names, assumed to be in the current directory if not otherwise
         specified for reading.  These can also be path/globs and the system will attempt to read all files matching
-        that glob filter.  for example, the following are all exampels of valid parameters:
-        'myfile.ini'
-        'dir/myfile.ini'
-        'dir/*.ini'
-        ['myfile.ini', 'myotherfile.ini', 'backup_files/myfile_??.ini']
+        that glob filter.  for example, the following are all exampels of valid parameters::
+
+            'myfile.ini'
+            'dir/myfile.ini'
+            'dir/\*.ini'
+            ['myfile.ini', 'myotherfile.ini', 'backup_files/myfile_??.ini']
+
         The filename to read from can also be passed during the read operation.
     :type read_filenames: str or list
     :param read_path_order: 'alpha' (default) or 'date', the order files will be processed if a path is passed.
