@@ -16,7 +16,7 @@ class ConfigMigrationError(Error):
 class ConfigMigrationManager(object):
     def __init__(self, section, *migration_dictionaries):
         self.section = section
-        self.manager = section.manager
+        self.manager = section._manager
 
         self.migrations = []
         self._options_to_remove = []
@@ -32,10 +32,10 @@ class ConfigMigrationManager(object):
             for m in md:
                 self.migrations.append(self._parse_migration(m))
 
-        self._int_key = self.manager._interpolation.key
-        self._int_sep = self.manager._interpolation.sep
-        self._int_enc = self.manager._interpolation.enc
-        self._int_max_depth = self.manager._interpolation.max_depth
+        self._int_key = self.manager._interpolator.key
+        self._int_sep = self.manager._interpolator.sep
+        self._int_enc = self.manager._interpolator.enc
+        self._int_max_depth = self.manager._interpolator.max_depth
 
     def set_migration(self, version):
         """
@@ -83,9 +83,9 @@ class ConfigMigrationManager(object):
                     match = True
                     action = getattr(actions, option_args['action_name'])
                     if isinstance(option_args['args'], dict):
-                        new_option, new_value = action(value=value, option_name=option_name, **option_args['args'])
+                        new_option, new_value = action(value, option_name, **option_args['args'])
                     elif isinstance(option_args['args'], (list, tuple)):
-                        new_option, new_value = action(value=value, option_name=option_name, *option_args['args'])
+                        new_option, new_value = action(value, option_name, *option_args['args'])
                     break
 
             if not keep_only and not match:
@@ -99,8 +99,11 @@ class ConfigMigrationManager(object):
 
         return tmp_dict
 
-    def _optionxform(self, option_name):
-        return self.manager.optionxform(optionstr=option_name, extra_allowed='!*?[]')
+    def _xf(self, option_name):
+        return self.section._xf(option_name, glob=True)
+
+    def _xf_this_sec(self, section):
+        return section is _UNSET or section == self.section.name or section is None
 
     def _parse_migration(self, migration_dict):
         tmp_stored_version = migration_dict.get('stored_version', _UNSET)
@@ -121,7 +124,7 @@ class ConfigMigrationManager(object):
                                                      sup_ver=migration_dict.get('live_version', None),
                                                      min_ver=migration_dict.get('live_version_min', None),
                                                      max_ver=migration_dict.get('live_version_max', None)),
-                  'action_class': migration_dict.get('action_class', None),
+                  'action_class': migration_dict.get('action_class', BaseMigrationActions),
                   'blank_stored_version': blank_stored_version,
                   'actions': {},
                   'keep_only': migration_dict.get('keep_only', False)}
@@ -137,8 +140,10 @@ class ConfigMigrationManager(object):
                 tmp_action['option_name'] = tmp_a.pop('option_name')
                 tmp_action['args'] = tmp_a
             elif isinstance(a, (tuple, list)):
+                tmp_a = list(tmp_a)
                 tmp_action['action_name'] = '_' + tmp_a.pop(0)
-                tmp_action['option_name'] = self._optionxform(tmp_a.pop(0))
+                section, option = self._xf(tmp_a.pop(0))
+                tmp_action['option_name'] = option
                 tmp_action['args'] = tmp_a
 
             else:
@@ -227,8 +232,12 @@ class BaseMigrationActions(object):
         Interpolates the string based on the interpolation rules, this can be called directly or through other actions.
         :return: The existing option, value
         """
-        manager = self._migration_manager.manager
+        # manager = self._migration_manager.manager
         interpolation_str = interpolation_str.replace('%(__current_value__)', value)
+
+        tmp_new_value = self._migration_manager.manager._interpolator.before_get(self._migration_manager.section.name, interpolation_str)
+
+        '''
         tmp_new_value = interpolate(interpolation_str,
                                     manager,
                                     max_depth=self._migration_manager.manager._int_max_depth,
@@ -236,6 +245,7 @@ class BaseMigrationActions(object):
                                     key_sep=self._migration_manager.manager._int_sep,
                                     key_enc=self._migration_manager.manager._int_enc,
                                     current_path=self._migration_manager.manager.section.name)
+        '''
         return option_name, tmp_new_value
 
 

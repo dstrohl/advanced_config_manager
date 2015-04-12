@@ -31,7 +31,7 @@ This dictionary could have the following keys:
 | actions             | list of actions|  A list of actions with the option names and the actions to take for each.        |
 +---------------------+----------------+-----------------------------------------------------------------------------------+
 | keep_only           | bool           | If True, only options in the list will be kept, for record based storage all      |
-|                     |                | others will be deleted                                                            |
+|                     |                | others will be deleted (Defaults to False                                         |
 +----------- ---------+----------------+-----------------------------------------------------------------------------------+
 | action_class        | ActionClass    | a subclass of :py:class:`BaseMigrationActions` that is used to do the changes     |
 +---------------------+----------------+-----------------------------------------------------------------------------------+

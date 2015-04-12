@@ -151,6 +151,7 @@ class TestConfigOption(unittest.TestCase):
 class NoSectConfigManager(ConfigManager):
     _no_sections = True
 
+
 class TestConfigManager(unittest.TestCase):
 
     def setUp(self):
@@ -471,27 +472,6 @@ class TestConfigManager(unittest.TestCase):
 
         self.assertEqual(c['option1'], 'test2')
 
-    def test_dict_manager(self):
-        self.c['section2'].storage_write_to = 'dict'
-        self.c['section2']['option2'] = 'test'
-        self.c.storage.register_storage(ConfigSimpleDictStorage)
-        tmp_dict = self.c.write(storage_names='dict')
-        tmp_ret_1 = {'SECTION2': {'option2': 'test'}}
-
-        #ip.si(False)
-        #ip.debug('TMP_DICT   : ', tmp_dict)
-
-        self.assertEqual(tmp_dict, tmp_ret_1)
-
-    def test_dict_manager_save_default(self):
-        self.c['section2'].storage_write_to = 'dict'
-        self.c['section2'].store_default = True
-        self.c['section2']['option2'] = 'test'
-        self.c.storage.register_storage(ConfigSimpleDictStorage)
-        tmp_dict = self.c.write(storage_names='dict')
-        tmp_ret_1 = {'SECTION_STD': {}, 'SECTION_LOCKED': {}, 'SECTION_DISALLOW_CREATE': {}, 'SECTION2': {'option3': 'opt3', 'od_int1_do_not_change': 1, 'od_string2_default': 'default_od_string', 'option5': 'opt5', 'option2': 'test'}}
-        print(tmp_dict)
-
     def test_seg_opt_sep(self):
         c = ConfigManager()
         c['section1.option1'] = 'test1'
@@ -517,19 +497,6 @@ class TestConfigManager(unittest.TestCase):
         c.add('section1')
         c['section1']._debug_()
         c._debug_()
-
-    def test_normal_dict(self):
-        test_dict = ConfigDict()
-
-        c = ConfigManager(data_dict=test_dict)
-
-        c.add('section1')
-        c['section1']['option1'] = "test"
-
-        self.assertEqual(c['section1.option1'], 'test')
-        self.assertEqual(test_dict['section1']['option1'], 'test')
-
-
 
 
 """

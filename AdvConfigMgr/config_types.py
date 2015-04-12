@@ -1,5 +1,6 @@
 __author__ = 'dstrohl'
 __all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataTypeDict', 'DataTypeBoolean',
+           'DataTypeLooseVersion', 'DataTypeStrictVersion',
            'DataTypeGenerator', 'data_type_generator']
 
 import ast
@@ -8,6 +9,7 @@ from AdvConfigMgr.utils import make_list, convert_to_boolean, slugify, get_after
 from AdvConfigMgr.config_validation import ValidationError
 from unicodedata import normalize
 from AdvConfigMgr.utils.unset import _UNSET
+from distutils.version import LooseVersion, StrictVersion
 
 '''
 class ItemKey(object):
@@ -294,6 +296,15 @@ class DataTypeBoolean(DataTypeBase):
 
     def _convert_from_string(self, value):
         return convert_to_boolean(value)
+
+
+class DataTypeLooseVersion(DataTypeBase):
+    name = 'LooseVersion'
+    _type_class = LooseVersion
+
+class DataTypeStrictVersion(DataTypeBase):
+    name = 'StrictVersion'
+    _type_class = StrictVersion
 
 
 data_type_generator = DataTypeGenerator(DataTypeFloat, DataTypeList, DataTypeStr,

@@ -144,39 +144,59 @@ class BaseConfigStorageManager(object):
         return self.manager.storage.default_manager.storage_name == self.storage_name
 
     def _ok_to_read_section(self, section_name, storage_name=storage_name):
+        ip.debug('checking for OK to READ section, ', section_name, ' with storage ', storage_name)
         if section_name not in self.manager:
             if self.allow_create and self.manager.allow_create_from_storage:
                 self.manager.add_section(dict(name=section_name, storage_write_to=self.storage_name))
+                ip.a().debug('YES').s()
                 return True
             else:
+                ip.a().debug('NO: section name not valid').s()
                 return False
         if storage_name == '*':
+            ip.a().debug('YES').s()
             return True
 
         tmp_section_tag = self.manager[section_name].storage_read_from_only
 
         if tmp_section_tag is None:
+            ip.a().debug('YES').s()
             return True
+
         if storage_name in list(tmp_section_tag):
+            ip.a().debug('YES').s()
             return True
+
+        ip.a().debug('NO: fell through checks.').s()
         return False
 
     def _ok_to_write_section(self, section_name, storage_name=None):
+        ip.debug('checking for OK to WRITE section, ', section_name, ' with storage ', storage_name)
 
         if storage_name is None:
             storage_name = self.storage_name
 
         if storage_name == '*':
+            ip.a().debug('YES').s()
             return True
 
         tmp_section_tag = self.manager[section_name].storage_write_to
+
         if tmp_section_tag is None:
-            if self.is_default:
+            if self in self.manager.storage.manager_list:
+                ip.a().debug('YES').s()
                 return True
             else:
+                ip.a().debug('NO: section name does not have storage name defined, and storage is not in default.')
+                ip.debug('current storage: ', self)
+                ip.debug('default list: ', self.manager.storage.manager_list).s()
                 return False
+
         if tmp_section_tag == '*' or tmp_section_tag == storage_name:
+            ip.a().debug('YES').s()
             return True
+
+        ip.a().debug('NO: fell through checks.').s()
         return False
 
     def _get_dict(self, section_name=None, storage_name=storage_name):
@@ -1051,7 +1071,12 @@ class StorageManagerManager(object):
     A class to handle storage managers
     """
 
-    def __init__(self, config_manager, managers=None, cli_parser_name='cli', cli_manager=None, storage_config=None):
+    def __init__(self, config_manager,
+                 managers=None,
+                 cli_parser_name='cli',
+                 cli_manager=None,
+                 storage_config=None,
+                 default_storage_managers=None):
         """
         :param config_manager: a link to the ConfigurationManager object
         :param managers: the managers to be registered.  The first manager passed will be imported as the default
@@ -1061,19 +1086,23 @@ class StorageManagerManager(object):
         self.config_manager = config_manager
         self.storage_managers = {}
         self.manager_list = []
-        self.default_manager = None
-        set_as_default = True
+
+        if default_storage_managers is None:
+            self.default_managers = []
+        else:
+            self.default_managers = default_storage_managers
+
         self._storage_config = {}
 
         if storage_config is not None:
             self._storage_config = storage_config
 
-        if not isinstance(managers, (list, tuple)):
-            managers = [managers]
+        if managers is not None:
+            if not isinstance(managers, (list, tuple)):
+                managers = [managers]
 
-        for a in managers:
-            self.register_storage(a, default=set_as_default)
-            set_as_default = False
+            for a in managers:
+                self.register_storage(a)
 
         if cli_parser_name is not None:
             if cli_parser_name not in self:
@@ -1082,8 +1111,7 @@ class StorageManagerManager(object):
                 cli_manager.storage_name = cli_parser_name
                 self.register_storage(cli_manager)
 
-
-    def register_storage(self, storage_manager, default=False):
+    def register_storage(self, storage_manager):
         ip.debug('registering storage manager')
 
         storage_manager = storage_manager()
@@ -1095,11 +1123,16 @@ class StorageManagerManager(object):
 
         # storage_manager.config(self._storage_config[storage_manager.storage_name])
 
-        if default or self.default_manager is None:
-            self.default_manager = storage_manager
-
-        if storage_manager.standard:
+        if self.default_managers is not None and storage_manager.storage_name in self.default_managers:
+            ip.a().debug('is lilsted as a default manager').s()
             self.manager_list.append(storage_manager)
+        elif not self.default_managers and storage_manager.standard:
+            ip.a().debug('is a standard manager (and no listings present').s()
+            self.manager_list.append(storage_manager)
+        else:
+            ip.a().debug('is not going to be a default manager')
+            ip.a().debug('default managers: ', self.default_managers)
+            ip.debug('standard state:', storage_manager.standard).s(2)
 
         self._sort_list()
 
@@ -1193,6 +1226,8 @@ class StorageManagerManager(object):
         :return: if ONLY one storage_name is passed, this will return the data from that manager if present.
         """
 
+        ip.info('writing data to storage locations').a()
+
         tmp_run_list = []
 
         tmp_section_count = 0
@@ -1201,6 +1236,7 @@ class StorageManagerManager(object):
 
         if storage_names is None:
             tmp_run_list.extend(self.manager_list)
+            ip.debug('using all registered standard managers')
         else:
             storage_names = make_list(storage_names)
             ip.debug('making a list...').a()
@@ -1226,7 +1262,6 @@ class StorageManagerManager(object):
             tmp_section_count += tsc
             tmp_option_count += toc
 
-        ip.info('write to storage managers').a()
         ip.info('sections: ', tmp_section_count)
         ip.info('options: ', tmp_option_count)
         ip.info('managers: ', tmp_storage_manager_count).s()

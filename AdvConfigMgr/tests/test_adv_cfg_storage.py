@@ -32,7 +32,7 @@ class StringCfgManager(ConfigManager):
     _DEFAULT_STORAGE_PLUGINS = (ConfigStringStorage, ConfigCLIStorage)
 
 
-class TestConfigManager(unittest.TestCase):
+class TestStorageManagers(unittest.TestCase):
     '''
     def setUp(self):
         ip.si(True)
@@ -139,13 +139,11 @@ class TestConfigManager(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp_ini_path = Path(__file__).parent
 
-
     @classmethod
     def tearDownClass(cls):
         pass
 
     def setUp(self):
-        ip.si(True)
         self.c = ConfigManager()
         self.c.add('section1', 'section2')
 
@@ -153,6 +151,27 @@ class TestConfigManager(unittest.TestCase):
 
     def tearDown(self):
         ip.mr('test').lp('TEST: Ending test ', self.id())
+
+    def test_dict_manager(self):
+        self.c['section2'].storage_write_to = 'dict'
+        self.c['section2']['option2'] = 'test'
+        self.c.storage.register_storage(ConfigSimpleDictStorage)
+        tmp_dict = self.c.write(storage_names='dict')
+        tmp_ret_1 = {'SECTION2': {'option2': 'test'}}
+
+        #ip.si(False)
+        #ip.debug('TMP_DICT   : ', tmp_dict)
+
+        self.assertEqual(tmp_dict, tmp_ret_1)
+
+    def test_dict_manager_save_default(self):
+        self.c['section2'].storage_write_to = 'dict'
+        self.c['section2'].store_default = True
+        self.c['section2']['option2'] = 'test'
+        self.c.storage.register_storage(ConfigSimpleDictStorage)
+        tmp_dict = self.c.write(storage_names='dict')
+        tmp_ret_1 = {'SECTION_STD': {}, 'SECTION_LOCKED': {}, 'SECTION_DISALLOW_CREATE': {}, 'SECTION2': {'option3': 'opt3', 'od_int1_do_not_change': 1, 'od_string2_default': 'default_od_string', 'option5': 'opt5', 'option2': 'test'}}
+        print(tmp_dict)
 
     def test_load_list(self):
 
@@ -202,7 +221,7 @@ class TestConfigManager(unittest.TestCase):
 
     def test_save_dict(self):
 
-        c = DictCfgManager()
+        c = DictCfgManager(default_storage_managers='dict')
 
         c.add_section('Section1')
 

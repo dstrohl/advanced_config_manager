@@ -133,11 +133,13 @@ from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slug
 import copy
 from distutils.version import StrictVersion, LooseVersion, Version
 
+from collections import OrderedDict
+
 __all__ = ['ConfigManager', 'ConfigSection', 'ConfigOption']
 
 
 class ConfigOption(object):
-    def __init__(self, section, name, data_value, *args, **kwargs):
+    def __init__(self, section, name, *args, **kwargs):
         """
         An individual option in the config
 
@@ -175,7 +177,12 @@ class ConfigOption(object):
         self._manager = self._section._manager
 
         junk, self._name = self._xf(name)
-        self._value = data_value
+
+        self._value = _UNSET
+
+        #self._data = data_value
+        #self._value = self._data._value
+        #self.default_value = self._data._default_value
 
         # only exists for IDE happiness.        
         self.default_value = _UNSET
@@ -265,6 +272,9 @@ class ConfigOption(object):
 
         ip.debug('created option: ', self._repr_str).s()
 
+    @property
+    def name(self):
+        return self._name
 
     def _xf(self, option):
         return self._section._xf(option)
@@ -272,16 +282,9 @@ class ConfigOption(object):
     def _xf_this_sect(self, section):
         return self._section._xf_this_sec(section)
 
-    @property
-    def path(self):
-        return self._section.name + '.' + self.name
 
     def validated(self, value):
         return self._datatype_manager(value)
-
-    @property
-    def is_empty(self):
-        return self.default_value == _UNSET and self._value == _UNSET
 
     @property
     def can_delete(self):
@@ -292,31 +295,6 @@ class ConfigOption(object):
         ip.debug('can_delete: ', tmp_ret)
 
         return tmp_ret
-
-    @property
-    def has_set_value(self):
-        return self._value != _UNSET
-
-    @property
-    def has_default_value(self):
-        return self.default_value != _UNSET
-
-    @property
-    def is_default(self):
-        return self.has_default_value and not self.has_set_value
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def value(self):
-        if self.has_set_value:
-            return self._value
-        if self.has_default_value:
-            return self.default_value
-        #raise EmptyOptionError(self.name, self._section.name)
-        return _UNSET
 
     @property
     def _has_cli(self):
@@ -456,6 +434,70 @@ class ConfigOption(object):
 
         return self._set(tmp_ret, validate=validate, force=True, from_string=from_string)
 
+    # *******************************************************************************************************
+    # ****  OPTION : Pass through methods
+    # *******************************************************************************************************
+
+    @property
+    def is_empty(self):
+        return self.default_value == _UNSET and self._value == _UNSET
+
+    @property
+    def path(self):
+        return self._section.name + '.' + self.name
+
+    @property
+    def has_set_value(self):
+        return self._value != _UNSET
+
+    @property
+    def has_default_value(self):
+        return self.default_value != _UNSET
+
+    @property
+    def is_default(self):
+        return self.has_default_value and not self.has_set_value
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def value(self):
+        if self.has_set_value:
+            return self._value
+        if self.has_default_value:
+            return self.default_value
+        return _UNSET
+
+    '''
+    @property
+    def path(self):
+        return self._data.path
+
+    @property
+    def is_empty(self):
+        return self._data.is_empty
+    @property
+    def has_set_value(self):
+        return self._data.has_set_value
+
+    @property
+    def has_default_value(self):
+        return self.default_value != _UNSET
+
+    @property
+    def is_default(self):
+        return self._data.has_default_value
+
+    @property
+    def value(self):
+        return self._data.value
+    '''
+    # *******************************************************************************************************
+    # ****  OPTION : Magic Methods
+    # *******************************************************************************************************
+
     def __len__(self):
         return len(self.value)
 
@@ -486,7 +528,7 @@ class ConfigSection(object):
     A single section of a config
     """
 
-    def __init__(self, manager, name, data_dict,
+    def __init__(self, manager, name,
                  verbose_name=None,
                  description=None,
                  storage_write_to=None,
@@ -531,7 +573,7 @@ class ConfigSection(object):
 
         self._manager = manager
 
-        self._data_dict = data_dict
+        # self._data_dict = data_dict
 
         if name is None:
             raise AttributeError('Section must have a name')
@@ -588,7 +630,7 @@ class ConfigSection(object):
 
         if self.version is not None:
             tmp_version_dict = {'name': self.version_option_name,
-                                'default_value': self.version,
+                                'default_value': str(self.version),
                                 'verbose_name': 'Section Version Number',
                                 'description': 'The version number for this section',
                                 'keep_if_empty': True,
@@ -655,7 +697,7 @@ class ConfigSection(object):
                 self.last_failure_list.append(o.name)
                 return False
         return True
-
+    '''
     @property
     def _data(self):
         if self._manager._lockable_data_dict:
@@ -666,9 +708,10 @@ class ConfigSection(object):
     def _data_lock(self):
         ip.debug('Section data dictionary is lockable, unlocking')
         self._manager._data_lock()
+    '''
 
-    def _xf(self, option):
-        return self._manager._xform.both(option, option_or_section='option', section=self._name)
+    def _xf(self, option, glob=False):
+        return self._manager._xform.both(option, option_or_section='option', section=self._name, glob=glob)
 
     def _xf_this_sec(self, section):
         return section is _UNSET or section == self.name or section is None
@@ -830,8 +873,8 @@ class ConfigSection(object):
                     elif not opt.do_not_delete or force:
                         ip.debug('section ', self._name, ' deleteing option ', option)
                         del self._options[option]
-                        del self._data[option]
-                        self._data_lock()
+                        #del self._data[option]
+                        #self._data_lock()
                     else:
                         ip.debug('option ', option, ' delete prohibited')
                         self.last_failure_list.append(option)
@@ -1045,9 +1088,9 @@ class ConfigSection(object):
 
         section, option = self._xf(name)
         if self._xf_this_sec(section):
-            tmp_data_rec = self._data.add(option, _UNSET)
-            self._options[option] = ConfigOption(self, option, tmp_data_rec, *args, **with_defaults)
-            self._data_lock()
+            # tmp_data_rec = self._data.add(option, _UNSET)
+            self._options[option] = ConfigOption(self, option, *args, **with_defaults)
+            # self._data_lock()
         else:
             if force:
                 kwargs['force_load'] = True
@@ -1139,7 +1182,7 @@ class ConfigManager(object):
 
     # Helper Classes Used
     _DEFAULT_INTERPOLATION = Interpolation
-    _DEFAULT_STORAGE_PLUGINS = (ConfigFileStorage, ConfigCLIStorage)
+    _DEFAULT_STORAGE_PLUGINS = (ConfigFileStorage, )
     _DEFAULT_STORAGE_MANAGER = StorageManagerManager
     _DEFAULT_CLI_MANAGER = ConfigCLIStorage
     _DEFAULT_XFORM = Xform
@@ -1147,14 +1190,15 @@ class ConfigManager(object):
     _DEFAULT_OPTION_CLASS = ConfigOption
     _DEFAULT_MIGRATION_CLASS = ConfigMigrationManager
     _DEFAULT_VERSION_MANAGER_CLASS = LooseVersion
-    _DEFAULT_DATA_DICT = ConfigDict
+    # _DEFAULT_DATA_DICT = ConfigDict
     _DEFAULT_DATA_TYPE_MANAGER = DataTypeGenerator
     _DEFAULT_DATA_TYPES = (DataTypeInt, DataTypeDict, DataTypeBoolean,
-                           DataTypeFloat, DataTypeList, DataTypeStr)
+                           DataTypeFloat, DataTypeList, DataTypeStr, DataTypeLooseVersion,
+                           DataTypeStrictVersion)
+    _DEFAULT_DICT_TYPE = OrderedDict
 
     # Storgae Options
     _default_cli_name = 'cli'
-    _default_storage_name = ('txt',)
 
     # Security Values
     _allow_add_from_storage = True
@@ -1181,15 +1225,24 @@ class ConfigManager(object):
     # allow_no_value = False
     # empty_lines_in_values = True
 
-    def __init__(self, data_dict=None, version=None, migrations=None, storage_config=None):
+    def __init__(self, version=None,
+                 migrations=None,
+                 storage_config=None,
+                 storage_managers=None,
+                 default_storage_managers=None,):
         """
 
         :param ConfigDict data_dict: any dictionary that can support the number of levels needed.
         :param str version: the sering version number.
         :param list migrations: a list of migration dictionaries.
-        :param dict storage_config: a dictionary of storage configuration dictionaries.  These woudl be in the format
+        :param dict storage_config: a dictionary of storage configuration dictionaries.  These would be in the format
             of {'storage_name':{<config_dict>},'storage_name':{<config_dict>}}.  See specific storage managers for
             details of the config dict entries.
+        :param BaseStorageManager storage_managers: a list or set of storage managers to use, if not passed, the file
+            storage manager is used.
+        :param list default_storage_managers: a list or string indicating the default storage manager(s) names to use
+            if no names are passed during read/write operations.  if None (the default) all conifgured storage managers
+            are polled.
         """
 
         if self._no_sections:
@@ -1202,6 +1255,7 @@ class ConfigManager(object):
 
         self._data_type_manager = self._DEFAULT_DATA_TYPE_MANAGER(*self._DEFAULT_DATA_TYPES)
 
+        '''
         if data_dict is None:
             self._data_dict = self._DEFAULT_DATA_DICT(self)
         else:
@@ -1213,9 +1267,10 @@ class ConfigManager(object):
             self._data_dict._xform = self._xform
         else:
             self._lockable_data_dict = False
+        '''
 
         self.last_fail_list = []
-        self._sections = {}
+        self._sections = self._DEFAULT_DICT_TYPE()
 
         self._cli_parser_args = {'prog': self._cli_program, 'description': self._cli_desc, 'epilog': self._cli_epilog}
 
@@ -1230,10 +1285,24 @@ class ConfigManager(object):
         self._cli_flags = []
         self._cli_args = {}
 
-        self._storage = self._DEFAULT_STORAGE_MANAGER(self, self._DEFAULT_STORAGE_PLUGINS,
+        self._storage = self._DEFAULT_STORAGE_MANAGER(self,
                                                       cli_manager=self._DEFAULT_CLI_MANAGER,
                                                       cli_parser_name=self._default_cli_name,
-                                                      storage_config=storage_config)
+                                                      storage_config=storage_config,
+                                                      default_storage_managers=default_storage_managers)
+
+        if storage_managers is None:
+            tmp_storage_managers = self._DEFAULT_STORAGE_PLUGINS
+        else:
+            if not isinstance(storage_managers, (list, tuple)):
+                tmp_storage_managers = (storage_managers, )
+            else:
+                tmp_storage_managers = storage_managers
+        for s in tmp_storage_managers:
+            self._storage.register_storage(s)
+
+
+
 
         if migrations is None:
             self._migrations = []
@@ -1321,6 +1390,7 @@ class ConfigManager(object):
                 return False
         return True
 
+    '''
     @property
     def _data(self):
         if self._lockable_data_dict:
@@ -1332,6 +1402,7 @@ class ConfigManager(object):
         if self._lockable_data_dict:
             self._data_dict._editable = False
             ip.debug('Base data dictionary is lockable, locking')
+    '''
 
     def add_section(self, section, force_add_default=False, **kwargs):
         """Create a new section in the configuration.
@@ -1348,9 +1419,9 @@ class ConfigManager(object):
 
         if section in self._sections:
             raise DuplicateSectionError(section)
-        tmp_data_rec = self._data.add(section)
-        self._sections[section] = ConfigSection(self, section, tmp_data_rec, **kwargs)
-        self._data_lock()
+        # tmp_data_rec = self._data.add(section)
+        self._sections[section] = ConfigSection(self, section, **kwargs)
+        # self._data_lock()
 
     def add(self, *args, **kwargs):
         """
