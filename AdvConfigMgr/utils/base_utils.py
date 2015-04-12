@@ -1763,7 +1763,7 @@ from unicodedata import normalize
 
 _punct_re = re.compile(r'[\t !"#$%&\'()*\-/<=>?@\[\\\]^_`{|},.]+')
 
-
+'''
 def slugify2(text, delim=u'-'):
     """Generates a slightly worse ASCII-only slug."""
     result = []
@@ -1773,7 +1773,7 @@ def slugify2(text, delim=u'-'):
             result.append(word)
     print('sluggify result:', result)
     return str(delim.join(result))
-
+'''
 
 def slugify(text, delim='_', case='lower', allowed=None, punct_replace='', encode=None):
     """
