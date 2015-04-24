@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Usage &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Using the Advanced Configuration Manager" href="tutorial.html" />
+    <link rel="next" title="Advanced Usage" href="advanced.html" />
+    <link rel="prev" title="Using the Advanced Configuration Manager" href="tutorial.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="advanced.html" title="Advanced Usage"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Using the Advanced Configuration Manager"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" accesskey="U">Using the Advanced Configuration Manager</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<p>Using the Configuration Manager can be simple, the minimum that you need to do is:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Import <tt class="xref py py-class docutils literal"><span class="pre">ConfigManager</span></tt> and instantiate it.</li>
+<li>Define the options that you want to use</li>
+<li>Reference the options</li>
+</ul>
+</div></blockquote>
+<div class="section" id="setup-the-manager">
+<h2>Setup the Manager<a class="headerlink" href="#setup-the-manager" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">AdvConfigMgr</span> <span class="kn">import</span> <span class="n">ConfigManager</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">ConfigManager</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="defining-options">
+<h2>Defining Options<a class="headerlink" href="#defining-options" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># define the section for the options</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s">&#39;my_section&#39;</span><span class="p">)</span>
+
+<span class="c"># define the options within the section</span>
+<span class="n">config</span><span class="p">[</span><span class="s">&#39;my_section&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">my_option1</span><span class="o">=</span><span class="s">&#39;default_value&#39;</span><span class="p">,</span> <span class="n">my_option2</span><span class="o">=</span><span class="mi">1234</span><span class="p">,</span> <span class="n">my_option3</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;item1&#39;</span><span class="p">,</span> <span class="s">&#39;item2&#39;</span><span class="p">])</span>
+<span class="c"># there are more ways of setting options as well</span>
+
+<span class="c"># if no advanced features are needed, often this will be handled more like this</span>
+<span class="n">section_config</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;my_section&#39;</span><span class="p">]</span>
+
+<span class="o">...</span>
+
+<span class="n">section_config</span><span class="p">[</span><span class="s">&#39;option1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="n">section_config</span><span class="p">[</span><span class="s">&#39;option2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">another_value</span>
+<span class="n">section_config</span><span class="p">[</span><span class="s">&#39;option3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">still_another_value</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-options">
+<h2>Using Options<a class="headerlink" href="#using-options" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># to save typing, we can assign the section to a variable:</span>
+<span class="n">sec</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;my_section&#39;</span><span class="p">]</span>
+
+<span class="c"># reading the option</span>
+<span class="n">temp_var</span> <span class="o">=</span> <span class="n">sec</span><span class="p">[</span><span class="s">&#39;my_option1&#39;</span><span class="p">]</span>
+
+<span class="c"># setting the option value</span>
+<span class="n">sec</span><span class="p">[</span><span class="s">&#39;my_option&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;new value&#39;</span>
+
+<span class="c"># clearing the option and using the default value</span>
+<span class="k">del</span> <span class="p">[</span><span class="s">&#39;my_option&#39;</span><span class="p">]</span>
+
+<span class="c"># you can also do something like this</span>
+<span class="n">tmp_var</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;my_section&#39;</span><span class="p">][</span><span class="s">&#39;my_option1&#39;</span><span class="p">]</span>
+
+<span class="c"># or even this if it works better for you</span>
+<span class="n">tmp_var</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s">&#39;my_section.my_option&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="saving-options-to-a-file">
+<h2>Saving Options to a file<a class="headerlink" href="#saving-options-to-a-file" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># saving to a storage location such as a file can be as easy as</span>
+<span class="n">config</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&#39;myfile.ini&#39;</span><span class="p">)</span>
+
+<span class="c"># and readign it again later</span>
+<span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&#39;myfile.ini&#39;</span><span class="p">)</span>
+
+<span class="c"># the filename can also be set during the initial setup, in which case you can simply do:</span>
+<span class="n">config</span><span class="o">.</span><span class="n">write</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="advanced-features-and-configuration">
+<h2>Advanced Features and configuration<a class="headerlink" href="#advanced-features-and-configuration" title="Permalink to this headline">¶</a></h2>
+<p>There are many advanced features and configuration options that are available if needed, as well as several ways of
+extending the system.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Usage</a><ul>
+<li><a class="reference internal" href="#setup-the-manager">Setup the Manager</a></li>
+<li><a class="reference internal" href="#defining-options">Defining Options</a></li>
+<li><a class="reference internal" href="#using-options">Using Options</a></li>
+<li><a class="reference internal" href="#saving-options-to-a-file">Saving Options to a file</a></li>
+<li><a class="reference internal" href="#advanced-features-and-configuration">Advanced Features and configuration</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="previous chapter">Using the Advanced Configuration Manager</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="advanced.html"
+                        title="next chapter">Advanced Usage</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/usage/usage.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="advanced.html" title="Advanced Usage"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Using the Advanced Configuration Manager"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Using the Advanced Configuration Manager</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

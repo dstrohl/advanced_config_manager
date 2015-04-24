@@ -1,0 +1,313 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Migration of Versions &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Advanced Usage" href="advanced.html" />
+    <link rel="next" title="Validation of data" href="validation.html" />
+    <link rel="prev" title="CLI Argument Management" href="cli.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="validation.html" title="Validation of data"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="cli.html" title="CLI Argument Management"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Using the Advanced Configuration Manager</a> &raquo;</li>
+          <li><a href="advanced.html" accesskey="U">Advanced Usage</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="migration-of-versions">
+<h1>Migration of Versions<a class="headerlink" href="#migration-of-versions" title="Permalink to this headline">¶</a></h1>
+<p>The system can help with migrating the data between versions.  To handle migrations, first create a migration definition
+dictionary. and pass it to the migration manager during section initialization.</p>
+<p>Migrations are handled on a section by section basis, and are performed when running a read operation from a storage
+manager (other than the cli manager)  So be aware that in a multi-storage environment,</p>
+<p>This dictionary could have the following keys:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="13%" />
+<col width="69%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key Name</th>
+<th class="head">Data Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>section_name</td>
+<td>str</td>
+<td>The name of the section to be used.  can be omited only if a simple config is used</td>
+</tr>
+<tr class="row-odd"><td>stored_version_min</td>
+<td>str</td>
+<td rowspan="3">The version of the stored data to convert from, this requires at least one of the
+version entries, and could have all three defined.
+If stored_version is None, (as oposed to omitted), this will be used to migrate
+from stored configs that do not have a version defined.</td>
+</tr>
+<tr class="row-even"><td>stored_version_max</td>
+<td>str</td>
+</tr>
+<tr class="row-odd"><td>stored_version</td>
+<td>str</td>
+</tr>
+<tr class="row-even"><td>live_version_min</td>
+<td>str</td>
+<td rowspan="3">The version of the stored data to convert from, this requires at least one of the
+version entries and could have all three defined.</td>
+</tr>
+<tr class="row-odd"><td>live_version_max</td>
+<td>str</td>
+</tr>
+<tr class="row-even"><td>live_version</td>
+<td>str</td>
+</tr>
+<tr class="row-odd"><td>actions</td>
+<td>list of actions</td>
+<td>A list of actions with the option names and the actions to take for each.</td>
+</tr>
+<tr class="row-even"><td rowspan="2"><blockquote class="first">
+<div>keep_only</div></blockquote>
+<dl class="last docutils">
+<dt>&#8212;&#8212;&#8212;&#8211; &#8212;&#8212;&#8212;</dt>
+<dd>action_class</dd>
+</dl>
+</td>
+<td>bool</td>
+<td>If True, only options in the list will be kept, for record based storage all
+others will be deleted (Defaults to False</td>
+</tr>
+<tr class="row-odd"><td>ActionClass</td>
+<td>a subclass of <tt class="xref py py-class docutils literal"><span class="pre">BaseMigrationActions</span></tt> that is used to do the changes</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="actions">
+<h2>Actions<a class="headerlink" href="#actions" title="Permalink to this headline">¶</a></h2>
+<p>This is a list of the actions that you want taken, each action record (dictionary or tuple) defines how you want to
+handle an option (or set of options matching the filter).</p>
+<p>The action records are either a dictionary of keys, or a tuple, these are passed to the action method as either a set
+of args (if a tuple) or as a kward set (if a dictionary)</p>
+<p>the action methods are in the MigrationActionClass, which you can also subclass and pass to in the migration definition
+dictionary if you want to handle migrations differently.</p>
+<p>An example of this is would be, if there is a migration action (&#8216;remove&#8217;,&#8217;my_option&#8217;) the MigrationManager class will
+call MigrationActionClass.remove(&#8216;my_option&#8217;).  This class method is responsible for carrying out the migration actions.</p>
+<p>This could also have been passed as an action {&#8216;action&#8217;:&#8217;remove&#8217;,&#8217;option_name&#8217;:&#8217;my_option&#8217;}</p>
+<div class="section" id="remove">
+<h3>Remove<a class="headerlink" href="#remove" title="Permalink to this headline">¶</a></h3>
+<p>These options will be removed and deleted from storage. <a class="footnote-reference" href="#rem1" id="id1">[1]</a></p>
+<p>Dict:</p>
+<div class="highlight-python"><div class="highlight"><pre>{&#39;action&#39;:&#39;remove&#39;,&#39;option_name&#39;:&lt;option_name&gt;}
+</pre></div>
+</div>
+<p>Tuple:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">(</span><span class="s">&#39;remove&#39;</span><span class="p">,</span><span class="s">&#39;option_name&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="rename">
+<h3>Rename<a class="headerlink" href="#rename" title="Permalink to this headline">¶</a></h3>
+<p>This will rename the options.  you have the option to pass an interpolation string as well with this that can modify
+the value of the string type options.</p>
+<p>Dict:</p>
+<div class="highlight-python"><div class="highlight"><pre>{&#39;action&#39;:&#39;rename&#39;,
+&#39;option_name&#39;:&lt;old option name&gt;,
+&#39;new_option_name&#39;:&lt;new option name&gt;,
+[&#39;interpolation_str&#39;:&lt;optional interpolation string&gt;]}
+</pre></div>
+</div>
+<p>Tuple:</p>
+<div class="highlight-python"><div class="highlight"><pre>(&#39;rename&#39;,&#39;old_option_name&#39;,&#39;new_option_name&#39;[, &#39;interpolation_str&#39;])
+</pre></div>
+</div>
+</div>
+<div class="section" id="copy">
+<h3>Copy<a class="headerlink" href="#copy" title="Permalink to this headline">¶</a></h3>
+<p>This will copy an option and add it from another option.  This also allows copying from another section if a name is
+passed using dot notation as well as an optional interpolation string.</p>
+<p>Dict:</p>
+<div class="highlight-python"><div class="highlight"><pre>{&#39;action&#39;:&#39;copy&#39;,
+&#39;option_name&#39;:&lt;existing option name&gt;,
+&#39;new_option_name&#39;,&lt;new option name&gt;,
+[&#39;interpolation_str&#39;:&lt;interpolation_string&gt;]}
+
+{&#39;action&#39;:&#39;copy&#39;,
+&#39;option_name&#39;:&lt;existing section name.existing option name&gt;,
+&#39;new_option_name&#39;,&lt;new option name&gt;,
+[&#39;interpolation_str&#39;:&lt;interpolation_string&gt;]}
+</pre></div>
+</div>
+<p>Tuple:</p>
+<div class="highlight-python"><div class="highlight"><pre>(&#39;copy&#39;,&#39;old_option_name&#39;,&#39;new_option_name&#39; [,&#39;interpolation_str&#39;])
+(&#39;copy&#39;,&#39;old_section.old_option_name,&#39;new_option_name&#39; [, &#39;interpolation_str&#39;])
+</pre></div>
+</div>
+</div>
+<div class="section" id="pass">
+<h3>Pass<a class="headerlink" href="#pass" title="Permalink to this headline">¶</a></h3>
+<p>These will just be passed through, this is generally not needed unless the &#8216;keep_only&#8217; flag is used, then these are
+required for all options to be kept.</p>
+<p>Dict:</p>
+<div class="highlight-python"><div class="highlight"><pre>{&#39;action&#39;:&#39;pass&#39;,
+&#39;option_name&#39;:&lt;option_name&gt;)
+</pre></div>
+</div>
+<p>Tuple:</p>
+<blockquote>
+<div>(&#8216;pass&#8217;,&#8217;option_name&#8217;)</div></blockquote>
+</div>
+<div class="section" id="interpolate">
+<h3>Interpolate<a class="headerlink" href="#interpolate" title="Permalink to this headline">¶</a></h3>
+<p>This runs the option through a simple interpolator, allowing for some simple conversions.</p>
+<p>Dict:</p>
+<div class="highlight-python"><div class="highlight"><pre>{&#39;action&#39;:&#39;interpolate&#39;,
+&#39;option_name&#39;:&lt;option_name&gt;
+[&#39;interpolation_str&#39;:&lt;interpolation string&gt;]}
+</pre></div>
+</div>
+<p>Tuple:</p>
+<div class="highlight-python"><div class="highlight"><pre>(&#39;interpolate&#39;,&#39;option_name&#39; [,&#39;interpolation_str&#39;])
+</pre></div>
+</div>
+</div>
+<div class="section" id="other">
+<h3>Other<a class="headerlink" href="#other" title="Permalink to this headline">¶</a></h3>
+<p>For more complex conversion needs, you can subclass the <tt class="xref py py-class docutils literal"><span class="pre">BaseMigrationActions</span></tt> class and create your own
+migrations.  Anything that is not in the above list will be passed to a method of the MigrationActions class method
+matching the name of the action.  every action definition must have a &#8216;action&#8217; key (or the first item in the tuple, and
+an &#8216;option_name&#8217; key (the second item in the tuple) that defines what options are sent.  along with the defined keys
+a kwarg of &#8216;value&#8217; will also be passed that is the current value of the option.</p>
+<p>Some actions support glob type wildcards (&#8216;*&#8217;, &#8216;?&#8217;, &#8216;!&#8217;, &#8216;[]&#8217;), (by default the &#8216;remove&#8217;, &#8216;interpolate&#8217;, and &#8216;pass&#8217;
+ones) Generally these would be ones that do not require changing the option name).</p>
+<p>For interpolations, use &#8216;%(__current_value__)&#8217; for the current value, %(option_name), %(section_name.option_name) to
+pull in othe values.</p>
+<p>By default, options without actions will simply be passed through unless the &#8220;keep_only&#8221; flag is set.</p>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="rem1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Only record based storage managers will delete these from the storage medium.  others will rely on the object
+not being present in the config since the entire config is re-written to the storage overwriting the old one.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Migration of Versions</a><ul>
+<li><a class="reference internal" href="#actions">Actions</a><ul>
+<li><a class="reference internal" href="#remove">Remove</a></li>
+<li><a class="reference internal" href="#rename">Rename</a></li>
+<li><a class="reference internal" href="#copy">Copy</a></li>
+<li><a class="reference internal" href="#pass">Pass</a></li>
+<li><a class="reference internal" href="#interpolate">Interpolate</a></li>
+<li><a class="reference internal" href="#other">Other</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="cli.html"
+                        title="previous chapter">CLI Argument Management</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="validation.html"
+                        title="next chapter">Validation of data</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/usage/migration.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="validation.html" title="Validation of data"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="cli.html" title="CLI Argument Management"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Using the Advanced Configuration Manager</a> &raquo;</li>
+          <li><a href="advanced.html" >Advanced Usage</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

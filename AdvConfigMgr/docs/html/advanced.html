@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Advanced Usage &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="index.html" />
+    <link rel="up" title="Using the Advanced Configuration Manager" href="tutorial.html" />
+    <link rel="next" title="Configuration and API" href="configuration.html" />
+    <link rel="prev" title="Usage" href="usage.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="configuration.html" title="Configuration and API"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="usage.html" title="Usage"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" accesskey="U">Using the Advanced Configuration Manager</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="advanced-usage">
+<h1>Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="using-cli-arguments">
+<h2>Using CLI arguments<a class="headerlink" href="#using-cli-arguments" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The CLI is handed with <tt class="xref py py-class docutils literal"><span class="pre">argparse</span></tt> so all options should be able to be matched to those for
+detailed questions, not all options are supported though.</p>
+</div>
+<ul>
+<li><dl class="first docutils">
+<dt>flags: (required) a flag or list of flags to be accepted. (these must be unique across the system).</dt>
+<dd><p class="first">Note:  The &#8216;-&#8216; that is required for <tt class="xref py py-class docutils literal"><span class="pre">argpars</span></tt> will be automatically added and does not need to
+be there.</p>
+<div class="last admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If only a single string is passed, it is assumed to be the flag</p>
+</div>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>data_flag: If present, this will set the &#8220;store_true&#8221; or &#8220;store_false&#8221; action in argparse, this means that</dt>
+<dd><p class="first last">if True is set, and the cli flag is set, the option will be set to True, and vice-versa.  If a default
+is used, it must be a boolean.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>nargs: [int] This will allow that number of arguments to be added to a list config item, so for example,</dt>
+<dd><dl class="first docutils">
+<dt>if nargs 3 is passed, the following argument would be treated as one:</dt>
+<dd><p class="first last">-arg 1 3 4</p>
+</dd>
+</dl>
+<p class="last">and would return [&#8216;1&#8217;,&#8216;2&#8217;,&#8216;3&#8217;], however if nargs 2 was passed, this would return [&#8216;1&#8217;,&#8216;2&#8217;] and the &#8216;3&#8217;
+would be treated as another positional argument.
+If a default is used in this case, it must be a list and have this many items.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>choices: a list of choices that are available (and will be validated against).  If a default is used, it</dt>
+<dd><p class="first last">must be present in the list.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>default: if not present, will use the option default, if present and None, will not have a default,</dt>
+<dd><p class="first last">if present and set to somethign, will use that as a default.
+.. note:: if a default is present, either passed or using the option default, it must also fit the other
+arguments.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">required: [True/False] this option MUST be passed on the command line.</p>
+</li>
+<li><dl class="first docutils">
+<dt>help: this is a descriotion string to be used on the command line.  if this is not present,</dt>
+<dd><p class="first">the option description will be used.</p>
+<dl class="last docutils">
+<dt>cli_option: ({&#8216;flags&#8217;:[&#8216;f&#8217;, &#8216;foo&#8217;],</dt>
+<dd><p class="first last">&#8216;data_flag&#8217;:False,
+&#8216;nargs&#8217;:2,
+&#8216;choices&#8217;:[&#8216;bar&#8217;,&#8217;barr&#8217;,&#8217;b&#8217;],
+&#8216;required&#8217;:False,
+&#8216;help&#8217;:&#8217;This defines if this is fu or bar&#8217;})</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="defining-additional-storage-locations">
+<h2>Defining additional storage locations<a class="headerlink" href="#defining-additional-storage-locations" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="interpolation">
+<h2>Interpolation<a class="headerlink" href="#interpolation" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="validation">
+<h2>Validation<a class="headerlink" href="#validation" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Advanced Usage</a><ul>
+<li><a class="reference internal" href="#using-cli-arguments">Using CLI arguments</a></li>
+<li><a class="reference internal" href="#defining-additional-storage-locations">Defining additional storage locations</a></li>
+<li><a class="reference internal" href="#interpolation">Interpolation</a></li>
+<li><a class="reference internal" href="#validation">Validation</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="usage.html"
+                        title="previous chapter">Usage</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="configuration.html"
+                        title="next chapter">Configuration and API</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/advanced.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="configuration.html" title="Configuration and API"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="usage.html" title="Usage"
+             >previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Using the Advanced Configuration Manager</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

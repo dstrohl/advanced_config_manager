@@ -12,9 +12,9 @@ import ast
 import os
 import logging
 
-from AdvConfigMgr.utils.base_utils import get_before, get_between, swap
-from AdvConfigMgr.utils.clicker_counter import Clicker
-from AdvConfigMgr.utils.flag_manager import Flagger
+from .base_utils import get_before, get_between, swap
+from .clicker_counter import Clicker
+from .flag_manager import Flagger
 from os import path
 
 

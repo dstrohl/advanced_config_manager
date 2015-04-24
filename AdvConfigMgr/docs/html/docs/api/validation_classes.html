@@ -1,0 +1,188 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Validation Classes &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Configuration and API" href="configuration.html" />
+    <link rel="next" title="Migration Assist Classes" href="migration_classes.html" />
+    <link rel="prev" title="Configuration Storage Plugins" href="configstoragemodules.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="migration_classes.html" title="Migration Assist Classes"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="configstoragemodules.html" title="Configuration Storage Plugins"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" accesskey="U">Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="validation-classes">
+<h1>Validation Classes<a class="headerlink" href="#validation-classes" title="Permalink to this headline">¶</a></h1>
+<p>These classes are used by the <a class="reference internal" href="data_type_classes.html"><em>Data Type Classes</em></a> to provide validation.  by default the data types only validate
+that the data is actually of that datatype, however you can add any validation you wish.</p>
+<div class="section" id="base-validation-class">
+<h2>Base Validation Class<a class="headerlink" href="#base-validation-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.config_validation.ValidationsBase">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.config_validation.</tt><tt class="descname">ValidationsBase</tt><a class="reference internal" href="../../_modules/AdvConfigMgr/config_validation.html#ValidationsBase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_validation.ValidationsBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the base object that all other validation objects shoudl be based on.  it is pretty simple at this point
+and is mainly a framework for consistency.</p>
+<dl class="method">
+<dt id="AdvConfigMgr.config_validation.ValidationsBase.validate">
+<tt class="descname">validate</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_validation.html#ValidationsBase.validate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_validation.ValidationsBase.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the main method for validation.  This is called by the configuration manager and the data is passed to
+it.  it should return that same data if it is validated, or raise an error or warning if not.</p>
+<p>Raising an error will stop the processing, raising a warning will simply log the problem, and the developer
+can choose to poll the error queue and display the errors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-AdvConfigMgr.config_validation">
+<span id="pre-configured-validation-classes"></span><h2>Pre-Configured Validation Classes<a class="headerlink" href="#module-AdvConfigMgr.config_validation" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt>
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.config_validation.</tt><tt class="descname">ValidationsBase</tt><a class="reference internal" href="../../_modules/AdvConfigMgr/config_validation.html#ValidationsBase"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>This is the base object that all other validation objects shoudl be based on.  it is pretty simple at this point
+and is mainly a framework for consistency.</p>
+<dl class="method">
+<dt>
+<tt class="descname">validate</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_validation.html#ValidationsBase.validate"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>This is the main method for validation.  This is called by the configuration manager and the data is passed to
+it.  it should return that same data if it is validated, or raise an error or warning if not.</p>
+<p>Raising an error will stop the processing, raising a warning will simply log the problem, and the developer
+can choose to poll the error queue and display the errors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Validation Classes</a><ul>
+<li><a class="reference internal" href="#base-validation-class">Base Validation Class</a></li>
+<li><a class="reference internal" href="#module-AdvConfigMgr.config_validation">Pre-Configured Validation Classes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="configstoragemodules.html"
+                        title="previous chapter">Configuration Storage Plugins</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="migration_classes.html"
+                        title="next chapter">Migration Assist Classes</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/api/validation_classes.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="migration_classes.html" title="Migration Assist Classes"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="configstoragemodules.html" title="Configuration Storage Plugins"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

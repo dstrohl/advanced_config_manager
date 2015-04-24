@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Interpolation Options &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Advanced Usage" href="advanced.html" />
+    <link rel="next" title="Configuration and API" href="../api/configuration.html" />
+    <link rel="prev" title="Managing Data Storage Locations" href="storage.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../api/configuration.html" title="Configuration and API"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="storage.html" title="Managing Data Storage Locations"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Using the Advanced Configuration Manager</a> &raquo;</li>
+          <li><a href="advanced.html" accesskey="U">Advanced Usage</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="interpolation-options">
+<h1>Interpolation Options<a class="headerlink" href="#interpolation-options" title="Permalink to this headline">¶</a></h1>
+<p>The interpolation system can handles replacement on the fly.  This is done within the options themselves, as well as
+during migrations.</p>
+<p>At its most basic, interpolation allows you to have a string that contains a key string that is replaced with the value
+of another configuration option.  For example:</p>
+<dl class="docutils">
+<dt>::</dt>
+<dd><p class="first"># setup the configuration manager</p>
+<p>config = ConfigManager()
+config.add(&#8216;section1&#8217;)
+section1 = config[&#8216;section1&#8217;]</p>
+<p># add some options for the data directory and data file</p>
+<p>section1[&#8216;data_dir&#8217;] = &#8216;my_path/data&#8217;
+section1[&#8216;data_filename&#8217;] = &#8216;my_data_file.db&#8217;</p>
+<p># add an option that will return the full file and path for the database:</p>
+<p>section1[&#8216;database&#8217;] = &#8216;%(data_dir)/%(data_filename)&#8217;</p>
+<p># when you call the interpolated option
+section1[&#8216;database&#8217;]</p>
+<p class="last">&#8216;mypath/data/my_data_file.db&#8217;</p>
+</dd>
+<dt>..note:: there are better approaches to handling paths in the system that woudl work better with cross platform systems,</dt>
+<dd>see <a href="#id1"><span class="problematic" id="id2">:py:module:`pathlib`</span></a></dd>
+</dl>
+<p>Interpolation can also handle cross section variables, so you can use %(section_name.option_name) if needed, as well as
+recursive variables where you are including a interpolated option in another interpolated option (up to a max of 10
+levels).</p>
+<p>if you need to use &#8220;%&#8221; in your option values, you can use escape it with &#8220;%%&#8221;</p>
+<p>..note:: you can disable interpolation by passing None to the &#8220;interpolator&#8221; keyward arg for the <tt class="xref py py-class docutils literal"><span class="pre">ConfigManager</span></tt></p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="storage.html"
+                        title="previous chapter">Managing Data Storage Locations</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../api/configuration.html"
+                        title="next chapter">Configuration and API</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/usage/interpolation.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../api/configuration.html" title="Configuration and API"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="storage.html" title="Managing Data Storage Locations"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Using the Advanced Configuration Manager</a> &raquo;</li>
+          <li><a href="advanced.html" >Advanced Usage</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

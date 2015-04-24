@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Storage Manager Classes &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Configuration and API" href="configuration.html" />
+    <link rel="next" title="ConfigStorage Class" href="configstorage.html" />
+    <link rel="prev" title="Data Type Classes" href="data_type_classes.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configstorage.html" title="ConfigStorage Class"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="data_type_classes.html" title="Data Type Classes"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" accesskey="U">Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="storage-manager-classes">
+<h1>Storage Manager Classes<a class="headerlink" href="#storage-manager-classes" title="Permalink to this headline">¶</a></h1>
+<p>The system can store configuration data in multiple storage locations, the following classes are used by the system to
+handle reading and writing from storage locations.</p>
+<p>There are three types of storage locations that the system recognizes;</p>
+<dl class="docutils">
+<dt>Read-Only:</dt>
+<dd>These are locations that do not ahve the ability to store data, Currently this is only the CLI manager.</dd>
+<dt>Block-Based:</dt>
+<dd>These are locations that or write everything at once and do not have the ability to modify a single option.
+Examples of these are INI text files and the dictionary and string managers.</dd>
+<dt>Record-Based:</dt>
+<dd>These are the most complex managers and are normally based on databases.  These have the ability to read or write
+options individually.</dd>
+</dl>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="configstorage.html">ConfigStorage Class</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="configstoragemanager.html">Configuration Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configstoragemodules.html">Configuration Storage Plugins</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="data_type_classes.html"
+                        title="previous chapter">Data Type Classes</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="configstorage.html"
+                        title="next chapter">ConfigStorage Class</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/api/storage_classes.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configstorage.html" title="ConfigStorage Class"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="data_type_classes.html" title="Data Type Classes"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Data Type Classes &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Configuration and API" href="configuration.html" />
+    <link rel="next" title="Storage Manager Classes" href="storage_classes.html" />
+    <link rel="prev" title="ConfigOption Class" href="configoption.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="storage_classes.html" title="Storage Manager Classes"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="configoption.html" title="ConfigOption Class"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" accesskey="U">Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="data-type-classes">
+<h1>Data Type Classes<a class="headerlink" href="#data-type-classes" title="Permalink to this headline">¶</a></h1>
+<p>These classes manage the data types available in the system.  They handle validation and data conversion for the system.
+The system comes with seveal datatypes pre-defined, but you can add more if you need special handling of your data.</p>
+<div class="section" id="data-type-base-class">
+<h2>Data Type Base Class<a class="headerlink" href="#data-type-base-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.config_types.DataTypeBase">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.config_types.</tt><tt class="descname">DataTypeBase</tt><big>(</big><em>validations=None</em>, <em>allow_empty=True</em>, <em>empty_type=Empty Value</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_types.html#DataTypeBase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_types.DataTypeBase" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>allow_empty</strong> &#8211; set to False if validation should be raised on empty or blank fields.</li>
+<li><strong>empty_types</strong> &#8211; set to a tuple of types that are considered empty</li>
+<li><strong>validations</strong> &#8211; a list or tuple of validation classes to run.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="AdvConfigMgr.config_types.DataTypeBase.from_string">
+<tt class="descname">from_string</tt><big>(</big><em>value</em>, <em>validate=True</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_types.html#DataTypeBase.from_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_types.DataTypeBase.from_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an object matching the datatype from a string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.config_types.DataTypeBase.to_string">
+<tt class="descname">to_string</tt><big>(</big><em>value</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_types.html#DataTypeBase.to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_types.DataTypeBase.to_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a string version of the value passed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.config_types.DataTypeBase.validated">
+<tt class="descname">validated</tt><big>(</big><em>value</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_types.html#DataTypeBase.validated"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_types.DataTypeBase.validated" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs all validations and returns the value if validated.
+:param value: value to be validated
+:return:</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-AdvConfigMgr.config_types">
+<span id="pre-configured-validation-classes"></span><h2>Pre-Configured Validation Classes<a class="headerlink" href="#module-AdvConfigMgr.config_types" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Data Type Classes</a><ul>
+<li><a class="reference internal" href="#data-type-base-class">Data Type Base Class</a></li>
+<li><a class="reference internal" href="#module-AdvConfigMgr.config_types">Pre-Configured Validation Classes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="configoption.html"
+                        title="previous chapter">ConfigOption Class</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="storage_classes.html"
+                        title="next chapter">Storage Manager Classes</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/api/data_type_classes.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="storage_classes.html" title="Storage Manager Classes"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="configoption.html" title="ConfigOption Class"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

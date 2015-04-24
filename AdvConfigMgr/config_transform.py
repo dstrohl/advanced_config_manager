@@ -2,9 +2,9 @@ __author__ = 'dstrohl'
 
 __all__ = ['Xform']
 
-from AdvConfigMgr.utils import get_after, get_before
+from .utils import get_after, get_before
 from unicodedata import normalize
-from AdvConfigMgr.utils.unset import _UNSET
+from .utils.unset import _UNSET
 
 class Xform(object):
 

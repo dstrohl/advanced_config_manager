@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Migration Assist Classes &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Configuration and API" href="configuration.html" />
+    <link rel="next" title="Extending the system" href="../extending/extending.html" />
+    <link rel="prev" title="Validation Classes" href="validation_classes.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../extending/extending.html" title="Extending the system"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="validation_classes.html" title="Validation Classes"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" accesskey="U">Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="migration-assist-classes">
+<h1>Migration Assist Classes<a class="headerlink" href="#migration-assist-classes" title="Permalink to this headline">¶</a></h1>
+<p>The system is designed to handle configuration changes during upgrades or downgrades.  The following classes are used
+for this process.  See <a class="reference internal" href="../usage/migration.html"><em>Migration of Versions</em></a> for information on how to configure and use migrations.</p>
+<div class="section" id="base-migration-manager-class">
+<h2>Base Migration Manager Class<a class="headerlink" href="#base-migration-manager-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.config_migrate.ConfigMigrationManager">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.config_migrate.</tt><tt class="descname">ConfigMigrationManager</tt><big>(</big><em>section</em>, <em>*migration_dictionaries</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_migrate.html#ConfigMigrationManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_migrate.ConfigMigrationManager" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="AdvConfigMgr.config_migrate.ConfigMigrationManager.set_migration">
+<tt class="descname">set_migration</tt><big>(</big><em>version</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_migrate.html#ConfigMigrationManager.set_migration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_migrate.ConfigMigrationManager.set_migration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will set the version manager to use based on the database version.  returns True if a version migration is
+found, False if no migration is found.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="base-migrations-actions-class">
+<h2>Base Migrations Actions Class<a class="headerlink" href="#base-migrations-actions-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.config_migrate.BaseMigrationActions">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.config_migrate.</tt><tt class="descname">BaseMigrationActions</tt><big>(</big><em>migration_manager</em><big>)</big><a class="reference internal" href="../../_modules/AdvConfigMgr/config_migrate.html#BaseMigrationActions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AdvConfigMgr.config_migrate.BaseMigrationActions" title="Permalink to this definition">¶</a></dt>
+<dd><p>To add new migration / conversion actions, subclass this and add new methods, each method MUST accept as the first
+two args &#8220;value&#8221; and &#8220;option_name&#8221;, after that, you can use whatever, though make sure to be consistent with how
+you define things in the migration dictionary.</p>
+<p>You must also return a tuple of new_option_name, new_value, or None, None.</p>
+<p>If your migration requires removeing an option, call <tt class="xref py py-meth docutils literal"><span class="pre">BaseMigrationActions._remove()</span></tt> and it it requires
+adding a new option, call <tt class="xref py py-meth docutils literal"><span class="pre">BaseMigrationActions._new()</span></tt>.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Migration Assist Classes</a><ul>
+<li><a class="reference internal" href="#base-migration-manager-class">Base Migration Manager Class</a></li>
+<li><a class="reference internal" href="#base-migrations-actions-class">Base Migrations Actions Class</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="validation_classes.html"
+                        title="previous chapter">Validation Classes</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../extending/extending.html"
+                        title="next chapter">Extending the system</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/api/migration_classes.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../extending/extending.html" title="Extending the system"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="validation_classes.html" title="Validation Classes"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

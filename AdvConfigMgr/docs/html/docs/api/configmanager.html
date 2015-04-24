@@ -1,0 +1,319 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ConfigManager Class &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="Core Classes" href="core_classes.html" />
+    <link rel="next" title="ConfigSection Class" href="configsection.html" />
+    <link rel="prev" title="Core Classes" href="core_classes.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configsection.html" title="ConfigSection Class"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="core_classes.html" title="Core Classes"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li>
+          <li><a href="core_classes.html" accesskey="U">Core Classes</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="configmanager-class">
+<h1>ConfigManager Class<a class="headerlink" href="#configmanager-class" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="AdvConfigMgr.ConfigManager">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.</tt><tt class="descname">ConfigManager</tt><big>(</big><em>version=None</em>, <em>migrations=None</em>, <em>storage_config=None</em>, <em>storage_managers=None</em>, <em>default_storage_managers=None</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigManager" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>allow_no_value</strong> &#8211; allow empty values.</li>
+<li><strong>empty_lines_in_values</strong> &#8211; </li>
+<li><strong>allow_add_from_storage</strong> &#8211; allow adding sections and options directly from the storage</li>
+<li><strong>allow_create_on_set</strong> &#8211; allows sections to be created when the set command is used.
+the set command can only be used to set the values of options, so this REQUIRES using dot-notation.</li>
+<li><strong>no_sections</strong> &#8211; this will disable all sections and all options will be accessible from the base manager
+object.  (this creates a section named &#8220;default_section&#8221;.)
+.. warning:: converting from simple configurations to sections may require manual data minipulation!</li>
+<li><strong>section_defaults</strong> &#8211; a dictionary of settings used as defaults for all sections created</li>
+<li><strong>interpolation</strong> &#8211; can be defined if interpolation is requested or required.</li>
+<li><strong>section_option_sep</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; defines a seperator character to use for getting options using the dot_notation
+style of query. defaults to &#8216;.&#8217;, in which case options can be queried by calling
+ConfigManager[section.option] in addition to ConfigManager[section][option].  If this is set to None, dot
+notation will be disabled.</li>
+<li><strong>cli_program</strong> &#8211; the name of the program for the cli help screen (by default this will use the program run
+to launch the app)</li>
+<li><strong>cli_desc</strong> &#8211; the text to show above the arguments in the cli help screen.</li>
+<li><strong>cli_epilog</strong> &#8211; the text to show at the end of the arguments in the cli help screen.</li>
+<li><strong>raise_error_on_locked_edit</strong> &#8211; if True, will raise an error if an attempt to change locked options,
+if False (default) the error is suppressed and the option will not be changed.</li>
+<li><strong>storage_managers</strong> (<em>BaseStorageManager</em>) &#8211; a list of storage managers to use, if none are passed, the configuration will not be
+able to be saved.</li>
+<li><strong>cli_parser_name</strong> &#8211; the name of the cli parser if not the default.  set to None if the CLI parser
+is not to be used.</li>
+<li><strong>cli_group_by_section</strong> &#8211; True if cli arguments shoudl be grouped by section for help screens.</li>
+<li><strong>version_class</strong> (<em>Version or str or None</em>) &#8211; &#8216;loose&#8217;, &#8216;strict&#8217;, a subclass of the Version class or None for no versioning.</li>
+<li><strong>version</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the version number string.</li>
+<li><strong>version_option_name</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the option named used to store the version for each section, {section} will be
+replaced by the name of the section.</li>
+<li><strong>version_allow_unversioned</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; if True, the system will import unversioned data, if false, the version
+of the data must be specified when importing any data.</li>
+<li><strong>version_enforce_versioning</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; if True, the system will raise an error if no version is set at the
+section or base level.</li>
+<li><strong>version_disable_cross_section_copy</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; if True, cross section copy will not work.  Used when you have
+plugins from different authors and you want to segment them.</li>
+<li><strong>version_make_migrations</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; this is a list of migrations that can be performed, (see <tt class="xref doc docutils literal"><span class="pre">migration</span></tt>)</li>
+<li><strong>kwargs</strong> &#8211; if &#8220;no_sections&#8221; is set, all section options can be passed to the ConfigManager object.</li>
+<li><strong>data_dict</strong> (<em>ConfigDict</em>) &#8211; any dictionary that can support the number of levels needed.</li>
+<li><strong>version</strong> &#8211; the sering version number.</li>
+<li><strong>migrations</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; a list of migration dictionaries.</li>
+<li><strong>storage_config</strong> (<a class="reference external" href="http://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; a dictionary of storage configuration dictionaries.  These would be in the format
+of {&#8216;storage_name&#8217;:{&lt;config_dict&gt;},&#8217;storage_name&#8217;:{&lt;config_dict&gt;}}.  See specific storage managers for
+details of the config dict entries.</li>
+<li><strong>storage_managers</strong> &#8211; a list or set of storage managers to use, if not passed, the file
+storage manager is used.</li>
+<li><strong>default_storage_managers</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; a list or string indicating the default storage manager(s) names to use
+if no names are passed during read/write operations.  if None (the default) all conifgured storage managers
+are polled.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigManager.add">
+<tt class="descname">add</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigManager.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds configuration options:</p>
+<div class="highlight-python"><div class="highlight"><pre>add(&#39;section1&#39;, &#39;section2&#39;, &#39;section3&#39;)
+add(section_def_dict1, section_def_dict2, section_def_dict3)
+add([list of section_def_dicts])
+add(&#39;section_name.option_name&#39;, &#39;section_name.option_name&#39;)
+
+add(section_name1=&#39;option_name1&#39;, section_name2=&#39;option_name2&#39;)
+add(section_name=section_def_dict, section_name2=section_def_dict)
+add(section_name=[list_of_option_names or dicts], section_name=(list of option names or dicts]
+</pre></div>
+</div>
+<p>section_def_dict keys</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="9%" />
+<col width="70%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>&#8216;name&#8217;</td>
+<td>None</td>
+<td>The name of the section</td>
+</tr>
+<tr class="row-odd"><td>&#8216;verbose_name&#8217;</td>
+<td>None</td>
+<td>The verbose name of the section</td>
+</tr>
+<tr class="row-even"><td>&#8216;description&#8217;</td>
+<td>None</td>
+<td>A long description of the section</td>
+</tr>
+<tr class="row-odd"><td>&#8216;storage&#8217;</td>
+<td>None</td>
+<td>The name of the storage location (if used)</td>
+</tr>
+<tr class="row-even"><td>&#8216;keep_if_empty&#8217;</td>
+<td>False</td>
+<td>Keep the section even if all options ahve been deleted</td>
+</tr>
+<tr class="row-odd"><td>&#8216;store_default&#8217;</td>
+<td>False</td>
+<td>Store defaults in storage medium</td>
+</tr>
+<tr class="row-even"><td>&#8216;locked&#8217;</td>
+<td>False</td>
+<td>If True, do not allow any changes to the section</td>
+</tr>
+<tr class="row-odd"><td>&#8216;allow_create_on_load&#8217;</td>
+<td>True</td>
+<td>Allow new options to be created directly from the storage medium
+for example, if you hand edit the ini file and add new options</td>
+</tr>
+<tr class="row-even"><td>&#8216;option_defaults&#8217;</td>
+<td>None</td>
+<td>Allows a dict to be passed with defaults for any new options in this section
+this will replace any system wide option defaults specified.</td>
+</tr>
+<tr class="row-odd"><td>&#8216;options&#8217;</td>
+<td>None</td>
+<td>Provides a list of options to be added to the section,</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">When no sections are used, this will redirect to <tt class="xref py py-meth docutils literal"><span class="pre">ConfigSection.add()</span></tt></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigManager.add_section">
+<tt class="descname">add_section</tt><big>(</big><em>section</em>, <em>force_add_default=False</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigManager.add_section" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new section in the configuration.</p>
+<p>Raise DuplicateSectionError if a section by the specified name
+already exists.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigManager.read">
+<tt class="descname">read</tt><big>(</big><em>sections=None</em>, <em>storage_names=None</em>, <em>override_tags=False</em>, <em>data=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigManager.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>runs the read from storage process for the selected or configured managers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>storage_names</strong> &#8211; If None, will read from all starnard storage managers, if a string or list, will read from
+the selected ones following the configured tag settings.</li>
+<li><strong>sections</strong> &#8211; If None, will read from all sections, if string or list, will read from the selected ones
+following the configured tag settings.</li>
+<li><strong>override_tags</strong> &#8211; if True, this will override the configured storage tag settings allowing things like
+exporting the full config etc.</li>
+<li><strong>data</strong> &#8211; if a single storage tag is passed, then data can be passed to that storage manager for saving.
+this will raise an AssignmentError if data is not None and more than one storage tag is passed.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigManager.write">
+<tt class="descname">write</tt><big>(</big><em>sections=None</em>, <em>storage_names=None</em>, <em>override_tags=False</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigManager.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>runs the write to storage process for the selected or configured managers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>storage_names</strong> &#8211; If None, will write to all starnard storage managers, if a string or list, will write to the
+selected ones following the configured tag settings.</li>
+<li><strong>sections</strong> &#8211; If None, will write to all sections, if string or list, will write to the selected ones
+following the configured tag settings.</li>
+<li><strong>override_tags</strong> &#8211; if True, this will override the configured storage tag settings allowing things like
+exporting the full config etc.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">if ONLY one storage_tag is passed, this will return the data from that manager if present.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="core_classes.html"
+                        title="previous chapter">Core Classes</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="configsection.html"
+                        title="next chapter">ConfigSection Class</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/api/configmanager.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configsection.html" title="ConfigSection Class"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="core_classes.html" title="Core Classes"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li>
+          <li><a href="core_classes.html" >Core Classes</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

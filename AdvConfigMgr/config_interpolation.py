@@ -1,8 +1,8 @@
 __author__ = 'dstrohl'
 
-from AdvConfigMgr.utils import Error, get_between, get_after
-from AdvConfigMgr.config_transform import Xform
-from AdvConfigMgr.config_exceptions import NoSectionError, NoOptionError
+from .utils import Error, get_between, get_after
+from .config_transform import Xform
+from .config_exceptions import NoSectionError, NoOptionError
 __all__ = ['Interpolation', 'NoInterpolation']
 
 

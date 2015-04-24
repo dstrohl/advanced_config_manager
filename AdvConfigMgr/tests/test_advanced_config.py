@@ -2,15 +2,19 @@ __author__ = 'dstrohl'
 
 import unittest
 import copy
-from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager, ip
-from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
+from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager
+from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError
 from AdvConfigMgr.config_storage import ConfigSimpleDictStorage
-from AdvConfigMgr.config_ro_dict import ConfigDict
+# from AdvConfigMgr.config_ro_dict import ConfigDict
 
 from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
     DataTypeList, DataTypeStr, _UNSET
 
 from AdvConfigMgr.config_validation import ValidateNumRange, ValidationError
+
+
+from ..config_logging import get_log
+log = get_log(__name__)
 
 
 class TestClass(object):
@@ -155,7 +159,6 @@ class NoSectConfigManager(ConfigManager):
 class TestConfigManager(unittest.TestCase):
 
     def setUp(self):
-        ip.si(True)
         self.c = ConfigManager()
         self.c.add('section1', 'section2')
         self.od_string1_no_default = {
@@ -249,11 +252,10 @@ class TestConfigManager(unittest.TestCase):
               option4=self.od_int2_do_not_delete,
               option5='opt5')
 
-        ip.si(False)
-        ip('TEST: Starting test ', self.id()).ms('test').a()
+        log.debug('TEST: Starting test %s', self.id()).ms('test').a()
 
     def tearDown(self):
-        ip.mr('test').lp('TEST: Ending test ', self.id())
+        log.mem('test').info('TEST: Ending test %s', self.id())
 
     def test_add_sections(self):
         # self.c.add(section_std=self.section_std)

@@ -9,7 +9,7 @@ setup(
     author='Dan Strohl',
     author_email='dan@wjcg.net',
     description='Advanced Configuration Manager',
-    install_requires=['pathutils', ],
+    install_requires=['pathutils', 'python_log_indenter', ],
     classifiers=['Development Status :: 2 - Pre-Alpha', 'Environment :: Plugins', 'Intended Audience :: Developers',
                  'License :: OSI Approved :: GNU General Public License v2 (GPLv2)', 'Natural Language :: English',
                  'Operating System :: OS Independent', 'Programming Language :: Python',

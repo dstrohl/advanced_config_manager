@@ -1,0 +1,343 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AdvConfigMgr.config_migrate &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="AdvConfigMgr" href="../AdvConfigMgr.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../AdvConfigMgr.html" accesskey="U">AdvConfigMgr</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for AdvConfigMgr.config_migrate</h1><div class="highlight"><pre>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;dstrohl&#39;</span>
+
+<span class="kn">from</span> <span class="nn">AdvConfigMgr.config_exceptions</span> <span class="kn">import</span> <span class="n">Error</span>
+<span class="kn">from</span> <span class="nn">AdvConfigMgr.utils</span> <span class="kn">import</span> <span class="n">VersionRange</span><span class="p">,</span> <span class="n">slugify</span><span class="p">,</span> <span class="n">_UNSET</span><span class="p">,</span> <span class="n">UnSet</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">fnmatch</span> <span class="kn">import</span> <span class="n">fnmatchcase</span>
+
+
+<span class="k">class</span> <span class="nc">ConfigMigrationError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">version_from</span><span class="p">,</span> <span class="n">version_to</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&#39;Error converting [{}.{}]: {}, converting from {} to {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">option</span><span class="p">,</span>
+                                                                              <span class="n">msg</span><span class="p">,</span> <span class="n">version_from</span><span class="p">,</span> <span class="n">version_to</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ConfigMigrationError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ConfigMigrationManager"><a class="viewcode-back" href="../../docs/api/migration_classes.html#AdvConfigMgr.config_migrate.ConfigMigrationManager">[docs]</a><span class="k">class</span> <span class="nc">ConfigMigrationManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="o">*</span><span class="n">migration_dictionaries</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">section</span> <span class="o">=</span> <span class="n">section</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">section</span><span class="o">.</span><span class="n">_manager</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">migrations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options_to_remove</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options_to_add</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">live_version</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">section</span><span class="o">.</span><span class="n">version</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_version</span> <span class="o">=</span> <span class="n">_UNSET</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_migration</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">for</span> <span class="n">md</span> <span class="ow">in</span> <span class="n">migration_dictionaries</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">md</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="n">md</span> <span class="o">=</span> <span class="p">[</span><span class="n">md</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">md</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">migrations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parse_migration</span><span class="p">(</span><span class="n">m</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_int_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_interpolator</span><span class="o">.</span><span class="n">key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_int_sep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_interpolator</span><span class="o">.</span><span class="n">sep</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_int_enc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_interpolator</span><span class="o">.</span><span class="n">enc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_int_max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_interpolator</span><span class="o">.</span><span class="n">max_depth</span>
+
+<div class="viewcode-block" id="ConfigMigrationManager.set_migration"><a class="viewcode-back" href="../../docs/api/migration_classes.html#AdvConfigMgr.config_migrate.ConfigMigrationManager.set_migration">[docs]</a>    <span class="k">def</span> <span class="nf">set_migration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">version</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Will set the version manager to use based on the database version.  returns True if a version migration is</span>
+<span class="sd">        found, False if no migration is found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_version</span> <span class="o">=</span> <span class="n">version</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_migration</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">migrations</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_version</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="s">&#39;blank_stored_version&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">live_version</span> <span class="ow">in</span> <span class="n">m</span><span class="p">[</span><span class="s">&#39;live_version_range&#39;</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_migration</span> <span class="o">=</span> <span class="n">m</span>
+                    <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">version</span> <span class="ow">in</span> <span class="n">m</span><span class="p">[</span><span class="s">&#39;stored_version_range&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">live_version</span> <span class="ow">in</span> <span class="n">m</span><span class="p">[</span><span class="s">&#39;live_version_range&#39;</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_migration</span> <span class="o">=</span> <span class="n">m</span>
+                    <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">options_to_remove</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">tmp_ret</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options_to_remove</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options_to_remove</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">tmp_ret</span>
+
+    <span class="k">def</span> <span class="nf">migrate_section</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">section_dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_migration</span><span class="p">(</span><span class="n">version</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">section_dict</span>
+
+        <span class="n">option_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_migration</span><span class="p">[</span><span class="s">&#39;actions&#39;</span><span class="p">]</span>
+        <span class="n">actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_migration</span><span class="p">[</span><span class="s">&#39;action_class&#39;</span><span class="p">]</span>
+        <span class="n">keep_only</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_migration</span><span class="p">[</span><span class="s">&#39;keep_only&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">actions</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">actions</span> <span class="o">=</span> <span class="n">BaseMigrationActions</span>
+        <span class="n">actions</span> <span class="o">=</span> <span class="n">actions</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">option</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">section_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">new_option</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">new_value</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">for</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">option_args</span> <span class="ow">in</span> <span class="n">option_list</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">fnmatchcase</span><span class="p">(</span><span class="n">option_name</span><span class="p">,</span> <span class="n">option</span><span class="p">):</span>
+                    <span class="n">match</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="n">action</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">actions</span><span class="p">,</span> <span class="n">option_args</span><span class="p">[</span><span class="s">&#39;action_name&#39;</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">option_args</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+                        <span class="n">new_option</span><span class="p">,</span> <span class="n">new_value</span> <span class="o">=</span> <span class="n">action</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">,</span> <span class="o">**</span><span class="n">option_args</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">option_args</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">],</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                        <span class="n">new_option</span><span class="p">,</span> <span class="n">new_value</span> <span class="o">=</span> <span class="n">action</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">,</span> <span class="o">*</span><span class="n">option_args</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">])</span>
+                    <span class="k">break</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">keep_only</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+                <span class="n">new_option</span> <span class="o">=</span> <span class="n">option</span>
+                <span class="n">new_value</span> <span class="o">=</span> <span class="n">value</span>
+
+            <span class="k">if</span> <span class="n">new_option</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">tmp_dict</span><span class="p">[</span><span class="n">new_option</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_value</span>
+
+        <span class="n">tmp_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options_to_add</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">tmp_dict</span>
+
+    <span class="k">def</span> <span class="nf">_xf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">option_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">section</span><span class="o">.</span><span class="n">_xf</span><span class="p">(</span><span class="n">option_name</span><span class="p">,</span> <span class="n">glob</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_xf_this_sec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">section</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">section</span> <span class="ow">is</span> <span class="n">_UNSET</span> <span class="ow">or</span> <span class="n">section</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">section</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="n">section</span> <span class="ow">is</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_parse_migration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">migration_dict</span><span class="p">):</span>
+        <span class="n">tmp_stored_version</span> <span class="o">=</span> <span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;stored_version&#39;</span><span class="p">,</span> <span class="n">_UNSET</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">tmp_stored_version</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">blank_stored_version</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">elif</span> <span class="n">tmp_stored_version</span> <span class="ow">is</span> <span class="n">UnSet</span><span class="p">:</span>
+            <span class="n">blank_stored_version</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">tmp_stored_version</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">blank_stored_version</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="n">tmp_md</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;stored_version_range&#39;</span><span class="p">:</span> <span class="n">VersionRange</span><span class="p">(</span><span class="n">version_class</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_version_class</span><span class="p">,</span>
+                                                       <span class="n">sup_ver</span><span class="o">=</span><span class="n">tmp_stored_version</span><span class="p">,</span>
+                                                       <span class="n">min_ver</span><span class="o">=</span><span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;stored_version_min&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+                                                       <span class="n">max_ver</span><span class="o">=</span><span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;stored_version_max&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)),</span>
+                  <span class="s">&#39;live_version_range&#39;</span><span class="p">:</span> <span class="n">VersionRange</span><span class="p">(</span><span class="n">version_class</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_version_class</span><span class="p">,</span>
+                                                     <span class="n">sup_ver</span><span class="o">=</span><span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;live_version&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+                                                     <span class="n">min_ver</span><span class="o">=</span><span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;live_version_min&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+                                                     <span class="n">max_ver</span><span class="o">=</span><span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;live_version_max&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)),</span>
+                  <span class="s">&#39;action_class&#39;</span><span class="p">:</span> <span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;action_class&#39;</span><span class="p">,</span> <span class="n">BaseMigrationActions</span><span class="p">),</span>
+                  <span class="s">&#39;blank_stored_version&#39;</span><span class="p">:</span> <span class="n">blank_stored_version</span><span class="p">,</span>
+                  <span class="s">&#39;actions&#39;</span><span class="p">:</span> <span class="p">{},</span>
+                  <span class="s">&#39;keep_only&#39;</span><span class="p">:</span> <span class="n">migration_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;keep_only&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)}</span>
+
+        <span class="k">if</span> <span class="s">&#39;actions&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">migration_dict</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&#39;Section Migration must have actions defined&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">migration_dict</span><span class="p">[</span><span class="s">&#39;actions&#39;</span><span class="p">]:</span>
+            <span class="n">tmp_action</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">tmp_a</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;action_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;_&#39;</span> <span class="o">+</span> <span class="n">tmp_a</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;action&#39;</span><span class="p">)</span>
+                <span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;option_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp_a</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;option_name&#39;</span><span class="p">)</span>
+                <span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp_a</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+                <span class="n">tmp_a</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tmp_a</span><span class="p">)</span>
+                <span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;action_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;_&#39;</span> <span class="o">+</span> <span class="n">tmp_a</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">section</span><span class="p">,</span> <span class="n">option</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xf</span><span class="p">(</span><span class="n">tmp_a</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+                <span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;option_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">option</span>
+                <span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp_a</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s">&#39;Unknown migration action found: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">tmp_md</span><span class="p">[</span><span class="s">&#39;action_class&#39;</span><span class="p">],</span> <span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;action_name&#39;</span><span class="p">]):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s">&#39;Action Class Object does not have the {} action defined&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;action_name&#39;</span><span class="p">])</span>
+                <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="n">tmp_md</span><span class="p">[</span><span class="s">&#39;actions&#39;</span><span class="p">][</span><span class="n">tmp_action</span><span class="p">[</span><span class="s">&#39;option_name&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">tmp_action</span>
+
+        <span class="k">return</span> <span class="n">tmp_md</span>
+
+</div>
+<div class="viewcode-block" id="BaseMigrationActions"><a class="viewcode-back" href="../../docs/api/migration_classes.html#AdvConfigMgr.config_migrate.BaseMigrationActions">[docs]</a><span class="k">class</span> <span class="nc">BaseMigrationActions</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    To add new migration / conversion actions, subclass this and add new methods, each method MUST accept as the first</span>
+<span class="sd">    two args &quot;value&quot; and &quot;option_name&quot;, after that, you can use whatever, though make sure to be consistent with how</span>
+<span class="sd">    you define things in the migration dictionary.</span>
+
+<span class="sd">    You must also return a tuple of new_option_name, new_value, or None, None.</span>
+
+<span class="sd">    If your migration requires removeing an option, call :py:meth:`BaseMigrationActions._remove` and it it requires</span>
+<span class="sd">    adding a new option, call :py:meth:`BaseMigrationActions._new`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">migration_manager</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_migration_manager</span> <span class="o">=</span> <span class="n">migration_manager</span>
+
+    <span class="c"># *************************************************************************************************************</span>
+    <span class="c"># **** Defined Actions</span>
+    <span class="c"># *************************************************************************************************************</span>
+
+    <span class="k">def</span> <span class="nf">_new</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This action should not be used by migration dictionaries and is instead an internal action used by other actions</span>
+<span class="sd">        :return: None, None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_migration_manager</span><span class="o">.</span><span class="n">_options_to_add</span><span class="p">[</span><span class="n">option_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a the option to the &quot;remove_options&quot; queue and returns None, None</span>
+<span class="sd">        :return: The existing option, value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_migration_manager</span><span class="o">.</span><span class="n">_options_to_remove</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">option_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">new_option_name</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a copy of the option to the &quot;new_options&quot; queue.</span>
+<span class="sd">        :return: The existing option, value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_value</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">interpolation_str</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">new_option_name</span><span class="p">,</span> <span class="n">new_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interpolate</span><span class="p">(</span><span class="n">new_option_name</span><span class="p">,</span> <span class="n">new_value</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_new</span><span class="p">(</span><span class="n">new_value</span><span class="p">,</span> <span class="n">new_option_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">new_option_name</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        adds the option to the &quot;remove options queue&quot;</span>
+<span class="sd">        :return: The new option name, value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_remove</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">interpolation_str</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interpolate</span><span class="p">(</span><span class="n">new_option_name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">new_option_name</span><span class="p">,</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_pass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds passes the option through the system without modification (unless the interpolation string is passed.)</span>
+<span class="sd">        :return: The existing option, value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">interpolation_str</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interpolate</span><span class="p">(</span><span class="n">option_name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_interpolate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interpolates the string based on the interpolation rules, this can be called directly or through other actions.</span>
+<span class="sd">        :return: The existing option, value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># manager = self._migration_manager.manager</span>
+        <span class="n">interpolation_str</span> <span class="o">=</span> <span class="n">interpolation_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;%(__current_value__)&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="n">tmp_new_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_migration_manager</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_interpolator</span><span class="o">.</span><span class="n">before_get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_migration_manager</span><span class="o">.</span><span class="n">section</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">interpolation_str</span><span class="p">)</span>
+
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        tmp_new_value = interpolate(interpolation_str,</span>
+<span class="sd">                                    manager,</span>
+<span class="sd">                                    max_depth=self._migration_manager.manager._int_max_depth,</span>
+<span class="sd">                                    key=self._migration_manager.manager._int_key,</span>
+<span class="sd">                                    key_sep=self._migration_manager.manager._int_sep,</span>
+<span class="sd">                                    key_enc=self._migration_manager.manager._int_enc,</span>
+<span class="sd">                                    current_path=self._migration_manager.manager.section.name)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">tmp_new_value</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../AdvConfigMgr.html" >AdvConfigMgr</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

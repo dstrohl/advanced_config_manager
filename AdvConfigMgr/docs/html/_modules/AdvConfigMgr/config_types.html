@@ -1,0 +1,405 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AdvConfigMgr.config_types &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="AdvConfigMgr" href="../AdvConfigMgr.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../AdvConfigMgr.html" accesskey="U">AdvConfigMgr</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for AdvConfigMgr.config_types</h1><div class="highlight"><pre>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;dstrohl&#39;</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;DataTypeList&#39;</span><span class="p">,</span> <span class="s">&#39;DataTypeStr&#39;</span><span class="p">,</span> <span class="s">&#39;DataTypeFloat&#39;</span><span class="p">,</span> <span class="s">&#39;DataTypeInt&#39;</span><span class="p">,</span> <span class="s">&#39;DataTypeDict&#39;</span><span class="p">,</span> <span class="s">&#39;DataTypeBoolean&#39;</span><span class="p">,</span>
+           <span class="s">&#39;DataTypeLooseVersion&#39;</span><span class="p">,</span> <span class="s">&#39;DataTypeStrictVersion&#39;</span><span class="p">,</span>
+           <span class="s">&#39;DataTypeGenerator&#39;</span><span class="p">,</span> <span class="s">&#39;data_type_generator&#39;</span><span class="p">]</span>
+
+<span class="kn">import</span> <span class="nn">ast</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">AdvConfigMgr.utils</span> <span class="kn">import</span> <span class="n">make_list</span><span class="p">,</span> <span class="n">convert_to_boolean</span><span class="p">,</span> <span class="n">slugify</span><span class="p">,</span> <span class="n">get_after</span><span class="p">,</span> <span class="n">get_before</span>
+<span class="kn">from</span> <span class="nn">AdvConfigMgr.config_validation</span> <span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span> <span class="nn">unicodedata</span> <span class="kn">import</span> <span class="n">normalize</span>
+<span class="kn">from</span> <span class="nn">AdvConfigMgr.utils.unset</span> <span class="kn">import</span> <span class="n">_UNSET</span>
+<span class="kn">from</span> <span class="nn">distutils.version</span> <span class="kn">import</span> <span class="n">LooseVersion</span><span class="p">,</span> <span class="n">StrictVersion</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">class ItemKey(object):</span>
+<span class="sd">    _sec_opt_sep = &#39;.&#39;</span>
+<span class="sd">    _def_glob_chars = &#39;*?[]!&#39;</span>
+<span class="sd">    _def_no_glob_chars = &#39;_&#39;</span>
+
+<span class="sd">    def __init__(self, name=None, **kwargs):</span>
+
+<span class="sd">        self._section = None</span>
+<span class="sd">        self._sect_compare = None</span>
+<span class="sd">        self._option = None</span>
+<span class="sd">        self._dot = False</span>
+<span class="sd">        self._xform_class = Xform()</span>
+<span class="sd">        </span>
+<span class="sd">        glob = kwargs.pop(&#39;glob&#39;, None)</span>
+<span class="sd">        if glob:</span>
+<span class="sd">            self._glob_chars = self._def_glob_chars</span>
+<span class="sd">        else:</span>
+<span class="sd">            self._glob_chars = self._def_no_glob_chars</span>
+
+<span class="sd">        self._save_and_xform(name=name, **kwargs)</span>
+
+<span class="sd">    def _set_sec(self, section):</span>
+<span class="sd">        self._section = self._xform_class.section(section, self._glob_chars)</span>
+
+<span class="sd">    def _set_opt(self, option):</span>
+<span class="sd">        self._option = self._xform_class.option(option, self._glob_chars)</span>
+<span class="sd">        self._sect_compare = self._xform_class.section(option, self._glob_chars)</span>
+
+<span class="sd">    def _save_dot_not(self, name):</span>
+<span class="sd">        if self._sec_opt_sep is not None and self._sec_opt_sep in name:</span>
+<span class="sd">            self._set_sec(get_before(name, self._sec_opt_sep))</span>
+<span class="sd">            self._set_opt(get_after(name, self._sec_opt_sep))</span>
+<span class="sd">            self._dot = True</span>
+<span class="sd">            return None</span>
+<span class="sd">        if self._sec_opt_sep is None and self._sec_opt_sep in name:</span>
+<span class="sd">            msg = &#39;Dot Notation disabled : {}&#39;.format(name)</span>
+<span class="sd">            raise AttributeError(msg)</span>
+<span class="sd">        return name</span>
+
+<span class="sd">    def _save_and_xform(self, name=None, **kwargs):</span>
+
+<span class="sd">        name = kwargs.get(&#39;name&#39;, name)</span>
+<span class="sd">        if name is not None:</span>
+<span class="sd">            if type(name) == type(self):</span>
+<span class="sd">                self._section = name.section</span>
+<span class="sd">                self._option = name.option</span>
+<span class="sd">                self._sect_compare = name._sect_compare</span>
+
+<span class="sd">            elif isinstance(name, str):</span>
+<span class="sd">                if self._save_dot_not(name) is not None:</span>
+<span class="sd">                    self._set_sec(name)</span>
+<span class="sd">                    self._set_opt(name)</span>
+
+<span class="sd">        if &#39;section&#39; in kwargs:</span>
+<span class="sd">            section = kwargs[&#39;section&#39;]</span>
+
+<span class="sd">            if isinstance(section, str):</span>
+<span class="sd">                if self._save_dot_not(section) is not None:</span>
+<span class="sd">                    self._set_sec(section)</span>
+<span class="sd">            elif type(section) == type(self):</span>
+<span class="sd">                self._section = name.section</span>
+<span class="sd">            else:</span>
+<span class="sd">                self._section = section</span>
+
+<span class="sd">        if &#39;option&#39; in kwargs:</span>
+<span class="sd">            option = kwargs[&#39;option&#39;]</span>
+
+<span class="sd">            if isinstance(option, str):</span>
+<span class="sd">                if self._save_dot_not(option) is not None:</span>
+<span class="sd">                    self._set_opt(option)</span>
+<span class="sd">            elif type(option) == type(self):</span>
+<span class="sd">                self._option = name.option</span>
+<span class="sd">            else:</span>
+<span class="sd">                self._option = option</span>
+
+<span class="sd">        return self</span>
+
+<span class="sd">    @property</span>
+<span class="sd">    def section(self):</span>
+<span class="sd">        return self._section</span>
+
+<span class="sd">    @property</span>
+<span class="sd">    def option(self):</span>
+<span class="sd">        return self._option</span>
+
+<span class="sd">    @property</span>
+<span class="sd">    def s(self):</span>
+<span class="sd">        return self._section</span>
+
+<span class="sd">    @property</span>
+<span class="sd">    def o(self):</span>
+<span class="sd">        return self._option</span>
+
+<span class="sd">    @property</span>
+<span class="sd">    def has_both(self):</span>
+<span class="sd">        return self._section == self._sect_compare</span>
+
+<span class="sd">    def __str__(self):</span>
+<span class="sd">        if self._section == self._sect_compare:</span>
+<span class="sd">            return self.s</span>
+<span class="sd">        else:</span>
+<span class="sd">            return &#39;{}{}{}&#39;.format(self.s, self._sec_opt_sep, self.o)</span>
+
+<span class="sd">    def __call__(self, name=None, **kwargs):</span>
+<span class="sd">        return self._save_and_xform(name, **kwargs)</span>
+
+<span class="sd">    def __eq__(self, other):</span>
+<span class="sd">        if isinstance(other, str):</span>
+<span class="sd">            return str(self) == other</span>
+<span class="sd">        elif type(other) == type(self):</span>
+<span class="sd">            return str(self) == str(other)</span>
+
+<span class="sd">    def __repr__(self):</span>
+<span class="sd">        return str(self)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="k">class</span> <span class="nc">DataTypeGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_type_classes</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">register_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">DataTypeBase</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;Data Type class is not a sub-class of DataTypeBase&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_type_classes</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">dt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_classes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_classes</span><span class="p">[</span><span class="n">dt</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&#39;Datatype {} not recognized for: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="DataTypeBase"><a class="viewcode-back" href="../../docs/api/data_type_classes.html#AdvConfigMgr.config_types.DataTypeBase">[docs]</a><span class="k">class</span> <span class="nc">DataTypeBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;str&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="nb">str</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validations</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">allow_empty</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">empty_type</span><span class="o">=</span><span class="n">_UNSET</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param allow_empty: set to False if validation should be raised on empty or blank fields.</span>
+<span class="sd">        :param empty_types: set to a tuple of types that are considered empty</span>
+<span class="sd">        :param validations: a list or tuple of validation classes to run.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">validations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">validations</span> <span class="o">=</span> <span class="n">make_list</span><span class="p">(</span><span class="n">validations</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">validations</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">empty_type</span> <span class="o">=</span> <span class="n">empty_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allow_empty</span> <span class="o">=</span> <span class="n">allow_empty</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">validated</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_validations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validations</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validations</span> <span class="o">=</span> <span class="n">make_list</span><span class="p">(</span><span class="n">validations</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">auto_convert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_class</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_class</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DataTypeBase.validated"><a class="viewcode-back" href="../../docs/api/data_type_classes.html#AdvConfigMgr.config_types.DataTypeBase.validated">[docs]</a>    <span class="k">def</span> <span class="nf">validated</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs all validations and returns the value if validated.</span>
+<span class="sd">        :param value: value to be validated</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_empty</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty_type</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">value</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_datatype</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validations</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tmp_msg</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%r</span><span class="s"> is does not match the datatype requirement of </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">tmp_msg</span><span class="p">)</span>
+
+            <span class="c"># return self._validations(value) and self._validate_datatype(value)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_validations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">validations</span><span class="p">:</span>
+                <span class="n">v</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_validate_datatype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a True/False depending on if the object matches the datatype defined.</span>
+<span class="sd">        Can be overwritten to validate the datatype.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_class</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_convert_to_string</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Should return a string version of the value passed</span>
+<span class="sd">        Shoudl be over-ridden for types that &quot;str&quot; does not work for.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tmp_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tmp_str</span>
+
+    <span class="k">def</span> <span class="nf">_convert_from_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Should returns an object matching the datatype from a string</span>
+<span class="sd">        Should be over-ridden for non-string types</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tmp_ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_class</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">tmp_ret</span>
+
+<div class="viewcode-block" id="DataTypeBase.to_string"><a class="viewcode-back" href="../../docs/api/data_type_classes.html#AdvConfigMgr.config_types.DataTypeBase.to_string">[docs]</a>    <span class="k">def</span> <span class="nf">to_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a string version of the value passed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_to_string</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DataTypeBase.from_string"><a class="viewcode-back" href="../../docs/api/data_type_classes.html#AdvConfigMgr.config_types.DataTypeBase.from_string">[docs]</a>    <span class="k">def</span> <span class="nf">from_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns an object matching the datatype from a string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_from_string</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;Datatype Validator for: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+</div>
+<span class="k">class</span> <span class="nc">DataTypeStr</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;str&#39;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_convert_from_string</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_convert_to_string</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">class</span> <span class="nc">DataTypeInt</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;int&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="nb">int</span>
+
+
+<span class="k">class</span> <span class="nc">DataTypeFloat</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;float&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="nb">float</span>
+
+
+<span class="k">class</span> <span class="nc">DataTypeList</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;list&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="nb">list</span>
+
+
+<span class="k">class</span> <span class="nc">DataTypeDict</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;dict&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="nb">dict</span>
+
+
+<span class="k">class</span> <span class="nc">DataTypeBoolean</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;bool&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="nb">bool</span>
+
+    <span class="k">def</span> <span class="nf">auto_convert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_class</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">convert_to_boolean</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_convert_to_string</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;YES&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;NO&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_convert_from_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">convert_to_boolean</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DataTypeLooseVersion</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;LooseVersion&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="n">LooseVersion</span>
+
+<span class="k">class</span> <span class="nc">DataTypeStrictVersion</span><span class="p">(</span><span class="n">DataTypeBase</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;StrictVersion&#39;</span>
+    <span class="n">_type_class</span> <span class="o">=</span> <span class="n">StrictVersion</span>
+
+
+<span class="n">data_type_generator</span> <span class="o">=</span> <span class="n">DataTypeGenerator</span><span class="p">(</span><span class="n">DataTypeFloat</span><span class="p">,</span> <span class="n">DataTypeList</span><span class="p">,</span> <span class="n">DataTypeStr</span><span class="p">,</span>
+                                        <span class="n">DataTypeInt</span><span class="p">,</span> <span class="n">DataTypeDict</span><span class="p">,</span> <span class="n">DataTypeBoolean</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../AdvConfigMgr.html" >AdvConfigMgr</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

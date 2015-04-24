@@ -1,0 +1,411 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Configuration Storage Plugins &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="index.html" />
+    <link rel="up" title="ConfigStorage Class" href="configstorage.html" />
+    <link rel="next" title="Extending the system" href="extending.html" />
+    <link rel="prev" title="Configuration Manager" href="configstoragemanager.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="extending.html" title="Extending the system"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="configstoragemanager.html" title="Configuration Manager"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li>
+          <li><a href="configstorage.html" accesskey="U">ConfigStorage Class</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="configuration-storage-plugins">
+<h1>Configuration Storage Plugins<a class="headerlink" href="#configuration-storage-plugins" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="storage-plugin-base-class">
+<h2>Storage Plugin Base Class<a class="headerlink" href="#storage-plugin-base-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.BaseConfigStorageManager">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.</tt><tt class="descname">BaseConfigStorageManager</tt><big>(</big><em>storage_tag=None</em>, <em>allow_create=None</em>, <em>standard=None</em>, <em>force=None</em>, <em>overwrite=None</em>, <em>lock_after_read=None</em>, <em>priority=100</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>defines an expandable storage subsystem for configs</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>storage_tag</strong> &#8211; </li>
+<li><strong>allow_create</strong> &#8211; </li>
+<li><strong>standard</strong> &#8211; </li>
+<li><strong>force</strong> &#8211; </li>
+<li><strong>overwrite</strong> &#8211; </li>
+<li><strong>lock_after_read</strong> &#8211; </li>
+<li><strong>priority</strong> &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.allow_create">
+<tt class="descname">allow_create</tt><em class="property"> = False</em><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.allow_create" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this can create options in the system, even if they are not pre-configured</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.force">
+<tt class="descname">force</tt><em class="property"> = False</em><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.force" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this will set options even if they are locked</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.force_strings">
+<tt class="descname">force_strings</tt><em class="property"> = False</em><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.force_strings" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if the storage only accepts strings</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.lock_after_read">
+<tt class="descname">lock_after_read</tt><em class="property"> = False</em><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.lock_after_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this will lock the option after reading</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.overwrite">
+<tt class="descname">overwrite</tt><em class="property"> = False</em><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.overwrite" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this will overwrite options that have existing values</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.read">
+<tt class="descname">read</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>read from storage and save to the system
+:param args:
+:param force: will add option even if locked
+:param overwrite: will overwrite existing value if present, otherwise this will skip
+:param kwargs:
+:return: the number of sections / options added</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.standard">
+<tt class="descname">standard</tt><em class="property"> = True</em><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.standard" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this should be used for read_all/write_all ops</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.storage_tag">
+<tt class="descname">storage_tag</tt><em class="property"> = None</em><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.storage_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>the internal name of the storage manager, must be unique</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.BaseConfigStorageManager.write">
+<tt class="descname">write</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.BaseConfigStorageManager.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write to storage from the system
+:param args:
+:param kwargs:
+:return: the number of sections / option written</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cli-plugin-class">
+<h2>CLI Plugin Class<a class="headerlink" href="#cli-plugin-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.ConfigCLIStorage">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.</tt><tt class="descname">ConfigCLIStorage</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read configuration from the CLI</p>
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigCLIStorage.force">
+<tt class="descname">force</tt><em class="property"> = True</em><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.force" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this will set options even if they are locked</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigCLIStorage.force_strings">
+<tt class="descname">force_strings</tt><em class="property"> = False</em><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.force_strings" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if the storage only accepts strings</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigCLIStorage.lock_after_read">
+<tt class="descname">lock_after_read</tt><em class="property"> = True</em><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.lock_after_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this will lock the option after reading</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigCLIStorage.overwrite">
+<tt class="descname">overwrite</tt><em class="property"> = True</em><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.overwrite" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this will overwrite options that have existing values</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigCLIStorage.read">
+<tt class="descname">read</tt><big>(</big><em>section_name=None</em>, <em>storage_tag='cli'</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>will take a dictionary and save it to the system
+:param dict_in:
+:param storage_tag:
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigCLIStorage.reset_cache">
+<tt class="descname">reset_cache</tt><big>(</big><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.reset_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reloades the cli_parser from the config.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigCLIStorage.standard">
+<tt class="descname">standard</tt><em class="property"> = True</em><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.standard" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this should be used for read_all/write_all ops</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigCLIStorage.write">
+<tt class="descname">write</tt><big>(</big><em>section_name=None</em>, <em>storage_tag='cli'</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigCLIStorage.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>cli does not accept writing options &#8211; disabled</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dictionary-plugin-class">
+<h2>Dictionary Plugin Class<a class="headerlink" href="#dictionary-plugin-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.ConfigSimpleDictStorage">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.</tt><tt class="descname">ConfigSimpleDictStorage</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSimpleDictStorage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read configuration from a dictionary.</p>
+<p>Keys are section names, values are dictionaries with keys and values
+that should be present in the section.</p>
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSimpleDictStorage.read">
+<tt class="descname">read</tt><big>(</big><em>section_name=None</em>, <em>storage_tag='dict'</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSimpleDictStorage.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>will take a dictionary and save it to the system
+:param dict_in:
+:param storage_tag:
+:return:</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigSimpleDictStorage.standard">
+<tt class="descname">standard</tt><em class="property"> = False</em><a class="headerlink" href="#AdvConfigMgr.ConfigSimpleDictStorage.standard" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if this should be used for read_all/write_all ops</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSimpleDictStorage.write">
+<tt class="descname">write</tt><big>(</big><em>section_name=None</em>, <em>storage_tag='dict'</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSimpleDictStorage.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>will return a dictionary from the system
+:param storage_tag:
+:return:</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="file-plugin-class">
+<h2>File Plugin Class<a class="headerlink" href="#file-plugin-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="AdvConfigMgr.ConfigFileStorage">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.</tt><tt class="descname">ConfigFileStorage</tt><big>(</big><em>*</em>, <em>delimiters=('='</em>, <em>':')</em>, <em>comment_prefixes=('#'</em>, <em>';')</em>, <em>inline_comment_prefixes=None</em>, <em>space_around_delimiters=True</em>, <em>strict=True</em>, <em>read_filenames=None</em>, <em>read_paths=None</em>, <em>read_path_blob='*.ini'</em>, <em>write_filename=None</em>, <em>create_files=True</em>, <em>fail_if_no_file=False</em>, <em>make_backup_before_writing=False</em>, <em>backup_filename='&amp;_&#64;.bak'</em>, <em>backup_path=None</em>, <em>max_backup_number=999</em>, <em>encoding=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigFileStorage" title="Permalink to this definition">¶</a></dt>
+<dd><p>A file manager that stores config files in a text file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>delimiters</strong> &#8211; the delimiter between the key and the value</li>
+<li><strong>comment_prefixes</strong> &#8211; this is a tuple of characters that if they occur as the first non-whitespace
+character of a line, the line is a comment</li>
+<li><strong>inline_comment_prefixes</strong> &#8211; this is a tuple of characters that if they occur elsewhere in the line after a
+whitespace char, the rest of the line is a comment.</li>
+<li><strong>space_around_delimiters</strong> &#8211; True if space should be added around the delimeters.</li>
+<li><strong>strict</strong> &#8211; if False, duplicate sections will be merged, if True, duplicate sections will raise an error</li>
+<li><strong>read_filenames</strong> &#8211; a filename or list of file names, assumed to be in the current directory if not otherwise
+specified for reading.
+The filename to read from can also be passed during the read operation.</li>
+<li><strong>read_paths</strong> &#8211; a path or list of paths to read files from, this allows reading all files in the path.</li>
+<li><strong>read_path_blob</strong> &#8211; the blob filter to use for reading files from a path.  the default is &#8216;*.ini&#8217;.</li>
+<li><strong>write_filename</strong> &#8211; the filename to write files to.
+if None and read_filenames is passed, this will take the first name in the list.
+if None and read_paths is passed, AND if there is ONLY ONE file in the path that matches the filter,
+this will use that file.
+the filename to write to can also be passed during the write operation.</li>
+<li><strong>leave_open</strong> &#8211; if True, the file objects will be left open while the config manager is loaded.  this can
+speed up file access, but it also uses up file handles, buffers, memory, and has the possibility of
+corrupted files.</li>
+<li><strong>create_files</strong> &#8211; if False, will not create any files it does not find.</li>
+<li><strong>fail_if_no_file</strong> &#8211; if False, will fail and raise an error if the specified filename is not found.</li>
+<li><strong>make_backup_before_writing</strong> &#8211; if True, the system will make a backup file before writing the configuration.</li>
+<li><strong>backup_filename</strong> &#8211; the filename of the backup file.  this can have the following formatting keys:
+&#8216;{NUM}&#8217; for an incremental number (uses the next available number)
+&#8216;{DATE}&#8217; for a date string (&#8216;YYYYMMDD&#8217;)
+&#8216;{STIME}&#8217; for a 1 second resolution time string (&#8216;HHMMSS&#8217;)
+&#8216;{MTIME}&#8217; for a 1 minute resolution time string {&#8216;HHMM&#8217;)
+&#8216;{NAME}&#8217; for the old config file name (without extension)</li>
+<li><strong>backup_path</strong> &#8211; if not None (the default) this allows the backup file to be in a different location.</li>
+<li><strong>max_backup_number</strong> &#8211; the max number (assuming a backup file and NUM in the filename)</li>
+<li><strong>encoding</strong> &#8211; </li>
+<li><strong>kwargs</strong> &#8211; any required kwargs from the base storage manager</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigFileStorage.force_strings">
+<tt class="descname">force_strings</tt><em class="property"> = True</em><a class="headerlink" href="#AdvConfigMgr.ConfigFileStorage.force_strings" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if the storage only accepts strings</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigFileStorage.read">
+<tt class="descname">read</tt><big>(</big><em>filenames</em>, <em>encoding=None</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigFileStorage.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read and parse a filename or a list of filenames.</p>
+<p>Files that cannot be opened are silently ignored; this is
+designed so that you can specify a list of potential
+configuration file locations (e.g. current directory, user&#8217;s
+home directory, systemwide directory), and all existing
+configuration files in the list will be read.  A single
+filename may also be given.</p>
+<p>Return list of successfully read files.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigFileStorage.read_string">
+<tt class="descname">read_string</tt><big>(</big><em>string</em>, <em>source='&lt;string&gt;'</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigFileStorage.read_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read configuration from a given string.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigFileStorage.storage_tag">
+<tt class="descname">storage_tag</tt><em class="property"> = 'txt'</em><a class="headerlink" href="#AdvConfigMgr.ConfigFileStorage.storage_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>the internal name of the storage manager, must be unique</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigFileStorage.write">
+<tt class="descname">write</tt><big>(</big><em>section_name=None</em>, <em>storage_tag='txt'</em>, <em>file=None</em>, <em>encoding=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigFileStorage.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>will write to an INI file.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="mongodb-plugin-class">
+<h2>MongoDB Plugin Class<a class="headerlink" href="#mongodb-plugin-class" title="Permalink to this headline">¶</a></h2>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">This</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Configuration Storage Plugins</a><ul>
+<li><a class="reference internal" href="#storage-plugin-base-class">Storage Plugin Base Class</a></li>
+<li><a class="reference internal" href="#cli-plugin-class">CLI Plugin Class</a></li>
+<li><a class="reference internal" href="#dictionary-plugin-class">Dictionary Plugin Class</a></li>
+<li><a class="reference internal" href="#file-plugin-class">File Plugin Class</a></li>
+<li><a class="reference internal" href="#mongodb-plugin-class">MongoDB Plugin Class</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="configstoragemanager.html"
+                        title="previous chapter">Configuration Manager</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="extending.html"
+                        title="next chapter">Extending the system</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/configstoragemodules.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="extending.html" title="Extending the system"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="configstoragemanager.html" title="Configuration Manager"
+             >previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li>
+          <li><a href="configstorage.html" >ConfigStorage Class</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

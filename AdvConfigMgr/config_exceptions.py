@@ -1,9 +1,9 @@
 __author__ = 'dstrohl'
 
 import warnings
-from AdvConfigMgr.utils import IndentedPrinter
+from .utils import IndentedPrinter
 
-ip = IndentedPrinter().set_logger('CFG_MGR').set_logger_disp_level('debug')
+# log = IndentedPrinter().set_logger('CFG_MGR').set_logger_disp_level('debug')
 
 
 # exception classes

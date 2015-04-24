@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Concepts &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="index.html" />
+    <link rel="next" title="Using the Advanced Configuration Manager" href="tutorial.html" />
+    <link rel="prev" title="Introduction" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="Using the Advanced Configuration Manager"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="concepts">
+<h1>Concepts<a class="headerlink" href="#concepts" title="Permalink to this headline">¶</a></h1>
+<p>The Advanced Configuration Manager uses the following concepts</p>
+<div class="section" id="configuration-manager">
+<h2>Configuration Manager<a class="headerlink" href="#configuration-manager" title="Permalink to this headline">¶</a></h2>
+<p>This is the main object for the configuration manager.  All interaction would normally be with this object.</p>
+</div>
+<div class="section" id="sections">
+<h2>Sections<a class="headerlink" href="#sections" title="Permalink to this headline">¶</a></h2>
+<p>A configuration is normally made up of sections, each section contains the options that are conifgured.  You can also
+configure the system to not need sections, in which case everything will be in a single flat dictionary like structure.</p>
+</div>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<p>The options are the end nodes of the system.  These are where you store your options, defaults, etc.  If you setup a
+default they will return that default if no other value is set.</p>
+<div class="section" id="interpolation">
+<h3>Interpolation<a class="headerlink" href="#interpolation" title="Permalink to this headline">¶</a></h3>
+<p>Interpolation allows one configuration variable to reference another.  so, for example, you could have options
+&#8220;first_name&#8221; and &#8220;last_name&#8221;, and have a third option with a value of &#8220;%(first_name) %(last_name)&#8221;, which, when polled
+would return the two names combined.</p>
+</div>
+</div>
+<div class="section" id="storage">
+<h2>Storage<a class="headerlink" href="#storage" title="Permalink to this headline">¶</a></h2>
+<p>This is where the options are stored.  There are various storage managers included, and an API for creating more.  For
+example, in a typical option set, you may have two storage managers used.  a file storage manager for saving text files
+and the cli manager for over-ridding some of the options with cli parameters.  In a more complex environment, you might
+have three storage managers used.  the cli storage to define where the startup file is stored, a local text file to
+configure the database connection parameters, and a database storage manager to save the majority of the items.</p>
+<p>You might even have other storage managers setup for specific items such as user specific settings, group or team
+settings, etc...</p>
+<p>You can even use an initial storage and configuration file to configure later storage managers (such as the above
+mentioned database managers).</p>
+<div class="section" id="storage-names">
+<h3>Storage Names<a class="headerlink" href="#storage-names" title="Permalink to this headline">¶</a></h3>
+<p>Most of this is handled by setting storage names.  Each storage manager has a name.  each section has two parameters
+that control what storage they can use.</p>
+<p><em>storage_write_to</em> can have the following settings:</p>
+<blockquote>
+<div><ul>
+<li><p class="first">&#8216;&lt;name&gt;&#8217;: The name of the storage location to save to.</p>
+</li>
+<li><p class="first">None: The section will be saved to the default location.</p>
+</li>
+<li><dl class="first docutils">
+<dt>&#8216;-&#8216;:  The section will NOT be saved in save_all operations (though it can still be manually saved to a storage</dt>
+<dd><p class="first last">location)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>&#8220;*&#8221;:  The section will be saved to ALL configured standard storage locations.  (not recommended in complex</dt>
+<dd><p class="first last">environments)</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>storage_read_from_only:</dt>
+<dd><ul class="first">
+<li><dl class="first docutils">
+<dt>[&#8216;&lt;name&gt;&#8217;, &#8216;&lt;name&gt;&#8217;]: A list of names, this will only allow data read from these storage locations to be used for</dt>
+<dd><p class="first last">these sections.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">None (default):  Options in storage will be always be used.</p>
+</li>
+</ul>
+<div class="last admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">CLI options, if configured, will always overwrite data from storage.</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Concepts</a><ul>
+<li><a class="reference internal" href="#configuration-manager">Configuration Manager</a></li>
+<li><a class="reference internal" href="#sections">Sections</a></li>
+<li><a class="reference internal" href="#options">Options</a><ul>
+<li><a class="reference internal" href="#interpolation">Interpolation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#storage">Storage</a><ul>
+<li><a class="reference internal" href="#storage-names">Storage Names</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="next chapter">Using the Advanced Configuration Manager</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/concepts.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="Using the Advanced Configuration Manager"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             >previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

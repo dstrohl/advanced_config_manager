@@ -1,141 +1,22 @@
 __author__ = 'dstrohl'
 
-"""Configuration file parser.
-
-A configuration file consists of sections, lead by a "[section]" header,
-and followed by "name: value" entries, with continuations and such in
-the style of RFC 822.
-
-Intrinsic defaults can be specified by passing them into the
-ConfigParser constructor as a dictionary.
-
-class:
-
-ConfigParser -- responsible for parsing a list of
-                    configuration files, and managing the parsed database.
-
-    methods:
-
-    __init__(defaults=None, dict_type=_default_dict, allow_no_value=False,
-             delimiters=('=', ':'), comment_prefixes=('#', ';'),
-             inline_comment_prefixes=None, strict=True,
-             empty_lines_in_values=True):
-        Create the parser. When `defaults' is given, it is initialized into the
-        dictionary or intrinsic defaults. The keys must be strings, the values
-        must be appropriate for %()s string interpolation.
-
-        When `dict_type' is given, it will be used to create the dictionary
-        objects for the list of sections, for the options within a section, and
-        for the default values.
-
-        When `delimiters' is given, it will be used as the set of substrings
-        that divide keys from values.
-
-        When `comment_prefixes' is given, it will be used as the set of
-        substrings that prefix comments in empty lines. Comments can be
-        indented.
-
-        When `inline_comment_prefixes' is given, it will be used as the set of
-        substrings that prefix comments in non-empty lines.
-
-        When `strict` is True, the parser won't allow for any section or option
-        duplicates while reading from a single source (file, string or
-        dictionary). Default is True.
-
-        When `empty_lines_in_values' is False (default: True), each empty line
-        marks the end of an option. Otherwise, internal empty lines of
-        a multiline option are kept as part of the value.
-
-        When `allow_no_value' is True (default: False), options without
-        values are accepted; the value presented for these is None.
-
-    sections()
-        Return all the configuration section names, sans DEFAULT.
-
-    has_section(section)
-        Return whether the given section exists.
-
-    has_option(section, option)
-        Return whether the given option exists in the given section.
-
-    options(section)
-        Return list of configuration options for the named section.
-
-    read(filenames, encoding=None)
-        Read and parse the list of named configuration files, given by
-        name.  A single filename is also allowed.  Non-existing files
-        are ignored.  Return list of successfully read files.
-
-    read_file(f, filename=None)
-        Read and parse one configuration file, given as a file object.
-        The filename defaults to f.name; it is only used in error
-        messages (if f has no `name' attribute, the string `<???>' is used).
-
-    read_string(string)
-        Read configuration from a given string.
-
-    read_dict(dictionary)
-        Read configuration from a dictionary. Keys are section names,
-        values are dictionaries with keys and values that should be present
-        in the section. If the used dictionary type preserves order, sections
-        and their keys will be added in order. Values are automatically
-        converted to strings.
-
-    get(section, option, raw=False, vars=None, fallback=_UNSET)
-        Return a string value for the named option.  All % interpolations are
-        expanded in the return values, based on the defaults passed into the
-        constructor and the DEFAULT section.  Additional substitutions may be
-        provided using the `vars' argument, which must be a dictionary whose
-        contents override any pre-existing defaults. If `option' is a key in
-        `vars', the value from `vars' is used.
-
-    getint(section, options, raw=False, vars=None, fallback=_UNSET)
-        Like get(), but convert value to an integer.
-
-    getfloat(section, options, raw=False, vars=None, fallback=_UNSET)
-        Like get(), but convert value to a float.
-
-    getboolean(section, options, raw=False, vars=None, fallback=_UNSET)
-        Like get(), but convert value to a boolean (currently case
-        insensitively defined as 0, false, no, off for False, and 1, true,
-        yes, on for True).  Returns False or True.
-
-    items(section=_UNSET, raw=False, vars=None)
-        If section is given, return a list of tuples with (name, value) for
-        each option in the section. Otherwise, return a list of tuples with
-        (section_name, section_proxy) for each section, including DEFAULTSECT.
-
-    remove_section(section)
-        Remove the given file section and all its options.
-
-    remove_option(section, option)
-        Remove the given option from the given section.
-
-    set(section, option, value)
-        Set the given option.
-
-    write(fp, space_around_delimiters=True)
-        Write the configuration state in .ini format. If
-        `space_around_delimiters' is True (the default), delimiters
-        between keys and values are surrounded by spaces.
-"""
-
-from AdvConfigMgr.config_exceptions import *
-from AdvConfigMgr.config_interpolation import Interpolation, NoInterpolation
-from AdvConfigMgr.config_types import *
-from AdvConfigMgr.config_storage import *
-from AdvConfigMgr.config_migrate import ConfigMigrationManager
-from AdvConfigMgr.utils.unset import _UNSET
-from AdvConfigMgr.config_transform import Xform
-from AdvConfigMgr.config_ro_dict import ConfigDict
-
-from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slugify, get_after, get_before
+from .config_exceptions import *
+from .config_interpolation import Interpolation, NoInterpolation
+from .config_types import *
+from .config_storage import *
+from .config_migrate import ConfigMigrationManager
+from .config_logging import enter, leave, get_log, dns
+from .utils.unset import _UNSET
+from .config_transform import Xform
+# from .config_ro_dict import ConfigDict
+from .utils import args_handler, convert_to_boolean, make_list, slugify, get_after, get_before
 import copy
 from distutils.version import StrictVersion, LooseVersion, Version
-
 from collections import OrderedDict
 
 __all__ = ['ConfigManager', 'ConfigSection', 'ConfigOption']
+
+log = get_log(__name__)
 
 
 class ConfigOption(object):
@@ -173,6 +54,9 @@ class ConfigOption(object):
         :param bool autoconvert: will attempt to autoconvert values to the datatype, this can be disabled if needed.
             (some types of data may not autoconvert correctly.)
         """
+
+       # log = enter('opt_rec')
+
         self._section = section
         self._manager = self._section._manager
 
@@ -196,6 +80,7 @@ class ConfigOption(object):
         self.do_not_delete = False
         self.required_after_load = False
         self.autoconvert = True
+        self.hidden = False
         # IDE happiness section ends
 
         args_list = (('default_value', _UNSET),
@@ -208,14 +93,15 @@ class ConfigOption(object):
                      ('do_not_delete', False),
                      ('do_not_change', False),
                      ('required_after_load', False),
-                     ('autoconvert', True))
+                     ('autoconvert', True),
+                     ('hidden', False))
 
         args_handler(self, args, args_list, kwargs)
 
         # self._value = _UNSET
         section, self._name = self._xf(self._name)
 
-        ip.debug('INIT option: ', self._name).a()
+        # log.debug('INIT option: ', self._name).a()
 
         if self.datatype is None:
             if self.default_value is not _UNSET:
@@ -232,7 +118,7 @@ class ConfigOption(object):
             raise NoOptionError(option=self.name, section=self._section.name)
 
         if self.cli_options is not None:
-            ip.debug('option has CLI settings: ', self.cli_options)
+            # log.debug('option has CLI settings: ', self.cli_options)
             cli_args = {'dest': self.name}
             if self.description is not None:
                 cli_args['help'] = self.description
@@ -270,7 +156,7 @@ class ConfigOption(object):
             self.cli_options = cli_args
             self._section._register_cli(self)
 
-        ip.debug('created option: ', self._repr_str).s()
+        # log.debug('created option: ', self._repr_str).s()
 
     @property
     def name(self):
@@ -289,10 +175,10 @@ class ConfigOption(object):
     @property
     def can_delete(self):
         tmp_ret = (self.default_value == _UNSET) and (not self.do_not_delete)
-        ip.debug('check delete [', self.path, ']').a()
-        ip.debug('default_value: ', self.default_value)
-        ip.debug('do_not_delete: ', self.do_not_delete)
-        ip.debug('can_delete: ', tmp_ret)
+        log.debug('check delete [%s]', self.path).a()
+        log.debug('default_value: %s', self.default_value)
+        log.debug('do_not_delete: %s', self.do_not_delete)
+        log.debug('can_delete: %s', tmp_ret)
 
         return tmp_ret
 
@@ -304,16 +190,16 @@ class ConfigOption(object):
             return True
 
     def clear(self):
-        ip.debug('clear option [', self.path, ']').a()
+        log.debug('clear option [%s]', self.path).a()
 
         if self.has_set_value:
             if self.has_default_value:
 
                 self._value = self.default_value
-                ip.debug('setting to default value: ', self.default_value).s()
+                log.debug('setting to default value: %s', self.default_value).s()
             else:
                 self._value = _UNSET
-                ip.debug('setting to _UNSET').s()
+                log.debug('setting to _UNSET').s()
 
         if not self.keep_if_empty and not self.has_default_value:
             self._section.delete(self.name, force=True)
@@ -332,7 +218,7 @@ class ConfigOption(object):
         if as_string:
             tmp_value = self._datatype_manager.to_string(tmp_value)
 
-        ip.debug('get option [', self.path, '], returning ', tmp_value)
+        log.debug('get option [%s] returning %s', self.path, tmp_value)
 
         return tmp_value
 
@@ -373,10 +259,10 @@ class ConfigOption(object):
         :return:
         """
 
-        if self.autoconvert:
-            value = self._datatype_manager.auto_convert(value)
-        elif from_string:
+        if from_string:
             value = self._datatype_manager.from_string(value)
+        elif self.autoconvert:
+            value = self._datatype_manager.auto_convert(value)
 
         if value != self._value:
 
@@ -384,19 +270,19 @@ class ConfigOption(object):
 
                 if self.has_default_value and value == self.default_value:
                     self.clear()
-                    ip.debug('set option [', self.path, '], to default value [', value, ']')
+                    log.debug('set option [%s] to default value [%s]', self.path, value)
 
                 if validate:
                     self.validated(value)
 
                 self._value = value
-                ip.debug('set option [', self.path, '], to ', value)
+                log.debug('set option [%s] to %s', self.path, value)
             else:
                 if self._manager._raise_error_on_locked_edit:
                     raise ForbiddenActionError('Change attempted on locked option [%s]' % self.name)
-                ip.debug('option [', self.path, '], is locked')
+                log.debug('option [%s] is locked', self.path)
         else:
-            ip.debug('option [', self.path, '], already set to ', value)
+            log.debug('option [%s] is already set to %s', self.path, value)
 
         return value
 
@@ -428,7 +314,7 @@ class ConfigOption(object):
         :return: the interpolated value or default value.
         """
         if not raw:
-            tmp_ret = self._manager._interpolator.before_write(self._section.name, value)
+            tmp_ret = self._manager._interpolator.before_read(self._section.name, value)
         else:
             tmp_ret = value
 
@@ -533,9 +419,12 @@ class ConfigSection(object):
                  description=None,
                  storage_write_to=None,
                  storage_read_from_only=None,
+                 storage_restricted_from=None,
+                 storage=None,
                  # keep_if_empty=True,
                  store_default=False,
                  locked=False,
+                 hidden=False,
                  allow_create_on_load=True,
                  allow_create_on_set=True,
                  option_defaults=None,
@@ -550,20 +439,28 @@ class ConfigSection(object):
         :param str name: The name of the section
         :param str verbose_name: The verbose name of the section
         :param str description: A long description of the section
-        :param str storage_write_to: The tag of the storage location to save to, if None, the section will be saved to
-            the default location, if '-' it will not be saved in save_all operations, if "*", section will be saved to
-            all configured storage locations. Sections can be saved manually to any storage if needed.
+        :param str storage: the storage manager to be used for this section.
+        :param str storage_write_to: The name of the storage location to save to, if None, the section will be saved to
+            the default location(s), if '-' it will not be saved in save_all operations and will need to be read with
+            the override_tags option, if "*", section will be saved to all configured storage locations. Sections can
+            be saved manually to any storage if needed using the override_tags option unless restricted using the
+            restricted_from flag.   This overrides the "storage" parameter if passed.
         :param storage_read_from_only: options from storage with tags in this list will be read.  If None
             (default) then options in storage will be always be used.  This allows restricting options to specific
-            storage locations.
+            storage locations, this overrides the "storage" parameter if passed.
             CLI options, if configured, will always overwrite data from storage.
         :type storage_read_from_only: str or list
+        :param storage_restricted_from: a string or list of storage names that CANNOT be used to store this information
+            used when the information is confidential and cannot be saved in or read from unprotected configuration
+            files.
+        :type storage_restricted_from: str or list
         :param bool store_default: store defaults in storage medium
-        :param bool locked: if True, do not allow any changes to the section
-        :param bool allow_create_on_load: if True, options will be created if they are in the stored data, if false, they
-            must be configured first.
-        :param bool allow_create_on_set: if True, options can be created using a dictionary set proces, if False, they need
-            to be configured first.
+        :param bool locked: if True, do not allow any changes to the section.
+        :param bool hidden: if True, do not show in any UI or user/admin facing interfaces.
+        :param bool allow_create_on_load: if True, options will be created if they are in the stored data, if false,
+            they must be configured first.
+        :param bool allow_create_on_set: if True, options can be created using a dictionary set proces, if False, they
+            need to be configured first.
         :param str cli_section_title: the name of the section in the CLI (if sectioned), Defaults to verbose_name
         :param str cli_section_desc: the description for the section in the CLI (if sectioned), Defaults to description
         :param str version: the version number of the section, if None, this will take the version number of the
@@ -584,9 +481,21 @@ class ConfigSection(object):
             self.verbose_name = name.title()
         else:
             self.verbose_name = verbose_name
+
         self.description = description
+
         self.storage_write_to = storage_write_to
+        if self.storage_write_to is None:
+            self.storage_write_to = storage
+
         self.storage_read_from_only = storage_read_from_only
+        if self.storage_read_from_only is None:
+            storage_read_from_only = storage
+
+        self.storage_read_from_only = make_list(storage_read_from_only)
+
+        self.storage_restricted_from = make_list(storage_restricted_from)
+
         self.store_default = store_default
         self.allow_create_on_load = allow_create_on_load
         self.allow_create_on_set = allow_create_on_set
@@ -648,34 +557,34 @@ class ConfigSection(object):
             self.add(options, force_load=True)
 
     def _debug_(self):
-        # ip.toggle_silent(False)
-        ip.debug('DEBUG DUMP FOR CONFIG SECTION').a(2)
+        # log.toggle_silent(False)
+        log.debug('DEBUG DUMP FOR CONFIG SECTION').a(2)
 
-        ip.debug('name : ', self._name)
-        ip.debug('verbose name : ', self.verbose_name)
-        ip.debug('description : ', self.description)
-        ip.debug('version : ', self.version)
-        ip.debug('version option name : ', self.version_option_name)
-        ip.debug('option defaults : ', self.option_defaults)
-        ip.debug('options : ', self._options)
+        log.debug('name : %s', self._name)
+        log.debug('verbose name : %s', self.verbose_name)
+        log.debug('description : %s', self.description)
+        log.debug('version : %s', self.version)
+        log.debug('version option name : %s', self.version_option_name)
+        log.debug('option defaults : %s', self.option_defaults)
+        log.debug('options : %s', self._options)
 
-        ip.s().debug('SECURITY FLAGS').a()
-        ip.debug('locked              : ', self.locked)
-        ip.debug('allow create on set : ', self.allow_create_on_set)
+        log.s().debug('SECURITY FLAGS').a()
+        log.debug('locked              : %s', self.locked)
+        log.debug('allow create on set : %s', self.allow_create_on_set)
 
-        ip.s().debug('STORAGE FLAGS').a()
-        ip.debug('store defaults : ', self.store_default)
-        ip.debug('storage write to : ', self.storage_write_to)
-        ip.debug('storage read from only : ', self.storage_read_from_only)
-        ip.debug('allow create on load : ', self.allow_create_on_load)
-        ip.debug('last fail list : ', self.last_failure_list)
-        ip.debug('cli section options : ', self._cli_section_options)
-        ip.debug('cli args : ', self._cli_args)
+        log.s().debug('STORAGE FLAGS').a()
+        log.debug('store defaults : %s', self.store_default)
+        log.debug('storage write to : %s', self.storage_write_to)
+        log.debug('storage read from only : %s', self.storage_read_from_only)
+        log.debug('allow create on load : %s', self.allow_create_on_load)
+        log.debug('last fail list : %s', self.last_failure_list)
+        log.debug('cli section options : %s', self._cli_section_options)
+        log.debug('cli args : %s', self._cli_args)
 
-        ip.s().debug('MIGRATION FLAGS').a()
-        ip.debug('migrations', self._migrations)
+        log.s().debug('MIGRATION FLAGS').a()
+        log.debug('migrations : %s', self._migrations)
 
-        ip.s(2)
+        log.s(2)
 
     def migrate_dict(self, storage_version, section_dict):
         if self._migrations is None:
@@ -701,12 +610,12 @@ class ConfigSection(object):
     @property
     def _data(self):
         if self._manager._lockable_data_dict:
-            ip.debug('Section data dictionary is lockable, unlocking')
+            log.debug('Section data dictionary is lockable, unlocking')
             self._manager._data_dict._editable = True
         return self._data_dict
 
     def _data_lock(self):
-        ip.debug('Section data dictionary is lockable, unlocking')
+        log.debug('Section data dictionary is lockable, unlocking')
         self._manager._data_lock()
     '''
 
@@ -852,35 +761,35 @@ class ConfigSection(object):
         :rtype: bool
         """
         if self.locked and not force:
-            ip.debug('section ', self._name, ' locked ')
+            log.debug('section %s is locked', self._name)
             return False
 
         options = make_list(options)
-        ip.debug('delete options: ', options)
+        log.debug('delete options: %s', options)
         self.last_failure_list = []
         tmp_ret = True
         for o in options:
 
             section, option = self._xf(o)
             if self._xf_this_sec(section):
-                ip.debug('trying option: ', option)
+                log.debug('trying option: %s', option)
 
                 try:
                     opt = self._options[option]
                     if opt.has_default_value and not force:
-                        ip.debug('section ', self._name, ' delete-clearing option ', option)
+                        log.debug('section %s, delete-clearing option %s', self._name, option)
                         opt.clear()
                     elif not opt.do_not_delete or force:
-                        ip.debug('section ', self._name, ' deleteing option ', option)
+                        log.debug('section %s, delteing option %s', self._name, option)
                         del self._options[option]
                         #del self._data[option]
                         #self._data_lock()
                     else:
-                        ip.debug('option ', option, ' delete prohibited')
+                        log.debug('option %s delete perhibited', option)
                         self.last_failure_list.append(option)
                         tmp_ret = False
                 except KeyError:
-                    ip.debug('option ', option, ' not found ')
+                    log.debug('option %s not found', option)
                     if forgiving:
                         self.last_failure_list.append(option)
                         tmp_ret = False
@@ -903,7 +812,7 @@ class ConfigSection(object):
         :raises NoOptionError: If the option does not exist. and forgiving is False.
         """
         if self.locked:
-            ip.debug('section ', self._name, ' locked ')
+            log.debug('section %s locked', self._name)
             self.last_failure_list.extend(make_list(options))
             return False
 
@@ -914,12 +823,12 @@ class ConfigSection(object):
             section, option = self._xf(o)
             if self._xf_this_sec(section):
 
-                ip.debug('trying option: ', option)
+                log.debug('trying option: %s', option)
                 try:
-                    ip.debug('section ', self._name, ' clearing option ', option)
+                    log.debug('section %s clearing option %s', self._name, option)
                     self._options[option].clear()
                 except KeyError:
-                    ip.debug('option ', option, ' not found ')
+                    log.debug('option %s not found', option)
                     if forgiving:
                         self.last_failure_list.append(option)
                         tmp_ret = False
@@ -931,7 +840,7 @@ class ConfigSection(object):
         return tmp_ret
 
     def _register_cli(self, option):
-        ip.a().debug('Registering CLI Option on load: ', option.name)
+        log.a().debug('Registering CLI Option on load: %s', option.name)
         if self._manager._default_cli_name is not None:
             self._manager.storage.get(self._manager._default_cli_name).reset_cache()
             tmp_args = option.cli_options
@@ -944,7 +853,7 @@ class ConfigSection(object):
 
             self._cli_args[tmp_dest] = tmp_args
             self._manager._cli_args[tmp_dest] = option
-        ip.s()
+        log.s()
 
     def load(self, option, value, *args, **kwargs):
         """
@@ -1199,7 +1108,20 @@ class ConfigManager(object):
 
     # Storgae Options
     _default_cli_name = 'cli'
+    """
+    a list of managers to automatically save on option change
+        "*" = all default ones
+        None = disable autosave
+    """
+    _autosave_names = ['*', ]
 
+    """
+    a list of managers to automatically load on init
+        "*" = all default ones
+        None = disable autoload
+        if enabled, make sure that all standard managers have enough info to load upon startup or you will get an error.
+    """
+    _autoload_names = None
     # Security Values
     _allow_add_from_storage = True
     _allow_create_on_set = True
@@ -1229,10 +1151,9 @@ class ConfigManager(object):
                  migrations=None,
                  storage_config=None,
                  storage_managers=None,
-                 default_storage_managers=None,):
+                 default_storage_managers=None,
+                 section_list=None):
         """
-
-        :param ConfigDict data_dict: any dictionary that can support the number of levels needed.
         :param str version: the sering version number.
         :param list migrations: a list of migration dictionaries.
         :param dict storage_config: a dictionary of storage configuration dictionaries.  These would be in the format
@@ -1243,7 +1164,18 @@ class ConfigManager(object):
         :param list default_storage_managers: a list or string indicating the default storage manager(s) names to use
             if no names are passed during read/write operations.  if None (the default) all conifgured storage managers
             are polled.
+        :param list section_list: a list of section definition dictionaries for initial data.
         """
+
+        # log = get_log(dns())
+        log.info('Iniatializing ConfigManager class').a()
+        log.debug('Migrations           : %s', migrations)
+        log.debug('Storage Config       : %s', storage_config)
+        log.debug('Storage Managers     : %s', storage_managers)
+        log.debug('Default Stor Mgrs    : %s', default_storage_managers)
+        log.debug('Initial Section List : %s', section_list).s()
+
+
 
         if self._no_sections:
             self._section_option_sep = None
@@ -1277,13 +1209,24 @@ class ConfigManager(object):
         self._version_class = self._DEFAULT_VERSION_MANAGER_CLASS
 
         if version is not None:
-            ip.debug('Version is not None, setting version to: ', version)
+            log.debug('Version is not None, setting version to: %s', version)
             self._version = self._version_class(version)
         else:
             self._version = None
 
         self._cli_flags = []
         self._cli_args = {}
+
+        if migrations is None:
+            self._migrations = []
+        else:
+            self._migrations = migrations
+
+        if self._no_sections:
+            self.add_section(self._no_section_section_name, force_add_default=True)
+
+        if section_list is not None:
+            self.add(section_list)
 
         self._storage = self._DEFAULT_STORAGE_MANAGER(self,
                                                       cli_manager=self._DEFAULT_CLI_MANAGER,
@@ -1302,57 +1245,53 @@ class ConfigManager(object):
             self._storage.register_storage(s)
 
 
-
-
-        if migrations is None:
-            self._migrations = []
+    @property
+    def has_cli(self):
+        if self._cli_flags:
+            return True
         else:
-            self._migrations = migrations
-
-        if self._no_sections:
-            self.add_section(self._no_section_section_name, force_add_default=True)
+            return False
 
     def _debug_(self):
-        ip.si(False)
-        ip.debug('DEBUG DUMP FOR CONFIG MANAGER').a(2)
+        log.debug('DEBUG DUMP FOR CONFIG MANAGER').a(2)
 
-        ip.debug('Name     : ', self.name)
+        log.debug('Name     : %s', self.name)
 
-        ip.debug('SECURITY FLAGS').a()
-        ip.debug('Allow Add from Storage      : ', self._allow_add_from_storage)
-        ip.debug('Allow create on set         : ', self._allow_create_on_set)
-        ip.debug('Disable Cross Section Copy  : ', self._disable_cross_section_copy)
-        ip.debug('Section Options Sep         : ', self._section_option_sep)
+        log.debug('SECURITY FLAGS').a()
+        log.debug('Allow Add from Storage      : %s', self._allow_add_from_storage)
+        log.debug('Allow create on set         : %s', self._allow_create_on_set)
+        log.debug('Disable Cross Section Copy  : %s', self._disable_cross_section_copy)
+        log.debug('Section Options Sep         : %s', self._section_option_sep)
 
-        ip.s().debug('SECTION').a()
-        ip.debug('No Sections            : ', self._no_sections)
-        ip.debug('Sections               : ', self.sections)
+        log.s().debug('SECTION').a()
+        log.debug('No Sections            : %s', self._no_sections)
+        log.debug('Sections               : %s', self.sections)
 
-        ip.s().debug('INTERPOLATION').a()
-        ip.debug('Interpolation Class : ', self._interpolator)
+        log.s().debug('INTERPOLATION').a()
+        log.debug('Interpolation Class : %s', self._interpolator)
 
-        ip.s().debug('VERSIONS').a()
-        ip.debug('Version                  : ', self._version)
-        ip.debug('Allow Unversioned        : ', self._allow_unversioned)
-        ip.debug('Enforce Versioning       : ', self._enforce_versioning)
-        # ip.debug('Root Version Option Name : ', self._version_option_name)
-        ip.debug('Version Class            : ', self._version_class)
+        log.s().debug('VERSIONS').a()
+        log.debug('Version                  : %s', self._version)
+        log.debug('Allow Unversioned        : %s', self._allow_unversioned)
+        log.debug('Enforce Versioning       : %s', self._enforce_versioning)
+        # log.debug('Root Version Option Name : ', self._version_option_name)
+        log.debug('Version Class            : %s', self._version_class)
 
-        ip.s().debug('STORAGE').a()
-        ip.debug('Storage Managers : ', self._storage)
+        log.s().debug('STORAGE').a()
+        log.debug('Storage Managers : %s', self._storage)
 
-        ip.debug('Group CLI By Section        : ', self._cli_group_by_section)
-        ip.debug('CLI Flags                   : ', self._cli_flags)
-        ip.debug('CLI Args                    : ', self._cli_args)
-        ip.debug('CLI Parser Args             : ', self._cli_parser_args)
+        log.debug('Group CLI By Section        : %s', self._cli_group_by_section)
+        log.debug('CLI Flags                   : %s', self._cli_flags)
+        log.debug('CLI Args                    : %s', self._cli_args)
+        log.debug('CLI Parser Args             : %s', self._cli_parser_args)
 
-        ip.debug('Raise Error on Locked Files : ', self._raise_error_on_locked_edit)
+        log.debug('Raise Error on Locked Files : %s', self._raise_error_on_locked_edit)
 
-        ip.debug('Last fail list              : ', self.last_fail_list)
+        log.debug('Last fail list              : %s', self.last_fail_list)
 
-        ip.s().debug('MIGRATION').a()
-        ip.debug('Migration Managers : ', self._migrations)
-        ip.s(2)
+        log.s().debug('MIGRATION').a()
+        log.debug('Migration Managers : %s', self._migrations)
+        log.s(2)
 
     def _xf(self, section, option=_UNSET):
         return self._xform.both(section, option_or_section='section', option=option)
@@ -1395,13 +1334,13 @@ class ConfigManager(object):
     def _data(self):
         if self._lockable_data_dict:
             self._data_dict._editable = True
-            ip.debug('Base data dictionary is lockable, unlocking')
+            log.debug('Base data dictionary is lockable, unlocking')
         return self._data_dict
 
     def _data_lock(self):
         if self._lockable_data_dict:
             self._data_dict._editable = False
-            ip.debug('Base data dictionary is lockable, locking')
+            log.debug('Base data dictionary is lockable, locking')
     '''
 
     def add_section(self, section, force_add_default=False, **kwargs):
@@ -1525,6 +1464,13 @@ class ConfigManager(object):
         :return: if ONLY one storage_tag is passed, this will return the data from that manager if present.
         """
         return self.storage.write(sections=sections, storage_names=storage_names, override_tags=override_tags, **kwargs)
+
+    def autosave(self):
+        if self._autosave_names is not None:
+            if '*' in self._autosave_names:
+                self.write()
+            else:
+                self.write(storage_names=self._autosave_names)
 
     def read(self, sections=None, storage_names=None, override_tags=False, data=None, **kwargs):
         """

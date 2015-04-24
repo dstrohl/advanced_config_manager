@@ -1,7 +1,7 @@
 __author__ = 'dstrohl'
 
-from AdvConfigMgr.config_exceptions import Error
-from AdvConfigMgr.utils import VersionRange, slugify, _UNSET, UnSet
+from .config_exceptions import Error
+from .utils import VersionRange, slugify, _UNSET, UnSet
 import copy
 from fnmatch import fnmatchcase
 

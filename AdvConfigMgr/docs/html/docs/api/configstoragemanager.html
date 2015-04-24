@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Configuration Manager &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="../../index.html" />
+    <link rel="up" title="ConfigStorage Class" href="configstorage.html" />
+    <link rel="next" title="Configuration Storage Plugins" href="configstoragemodules.html" />
+    <link rel="prev" title="ConfigStorage Class" href="configstorage.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configstoragemodules.html" title="Configuration Storage Plugins"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="configstorage.html" title="ConfigStorage Class"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li>
+          <li><a href="storage_classes.html" >Storage Manager Classes</a> &raquo;</li>
+          <li><a href="configstorage.html" accesskey="U">ConfigStorage Class</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="configuration-manager">
+<h1>Configuration Manager<a class="headerlink" href="#configuration-manager" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="AdvConfigMgr.StorageManagerManager">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.</tt><tt class="descname">StorageManagerManager</tt><big>(</big><em>config_manager</em>, <em>managers=None</em>, <em>cli_parser_name='cli'</em>, <em>cli_manager=None</em>, <em>storage_config=None</em>, <em>default_storage_managers=None</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.StorageManagerManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>A class to handle storage managers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>config_manager</strong> &#8211; a link to the ConfigurationManager object</li>
+<li><strong>managers</strong> &#8211; the managers to be registered.  The first manager passed will be imported as the default</li>
+<li><strong>cli_parser_name</strong> &#8211; the name of the cli parser if not &#8216;cli&#8217;, if None, this will disable CLI parsing.</li>
+<li><strong>cli_manager</strong> &#8211; None uses the standard CLI Parser, this allows replacement of the default cli manager</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="AdvConfigMgr.StorageManagerManager.read">
+<tt class="descname">read</tt><big>(</big><em>sections=None</em>, <em>storage_names=None</em>, <em>override_tags=False</em>, <em>data=None</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.StorageManagerManager.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>runs the read from storage process for the selected or configured managers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>storage_names</strong> &#8211; If None, will read from all starnard storage managers, if a string or list, will read from
+the selected ones following the configured tag settings.</li>
+<li><strong>sections</strong> &#8211; If None, will read from all sections, if string or list, will read from the selected ones
+following the configured tag settings.</li>
+<li><strong>override_tags</strong> &#8211; if True, this will override the configured storage name settings allowing things like
+exporting the full config etc.</li>
+<li><strong>data</strong> &#8211; if a single storage name is passed, then data can be passed to that storage manager for saving.
+this will raise an AssignmentError if data is not None and more than one storage name is passed.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.StorageManagerManager.write">
+<tt class="descname">write</tt><big>(</big><em>sections=None</em>, <em>storage_names=None</em>, <em>override_tags=False</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.StorageManagerManager.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>runs the write to storage process for the selected or configured managers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>storage_names</strong> &#8211; If None, will write to all starnard storage managers, if a string or list, will write to
+the selected ones following the configured tag settings.</li>
+<li><strong>sections</strong> &#8211; If None, will write to all sections, if string or list, will write to the selected ones
+following the configured tag settings.</li>
+<li><strong>override_tags</strong> &#8211; if True, this will override the configured storage name settings allowing things like
+exporting the full config etc.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">if ONLY one storage_name is passed, this will return the data from that manager if present.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="configstorage.html"
+                        title="previous chapter">ConfigStorage Class</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="configstoragemodules.html"
+                        title="next chapter">Configuration Storage Plugins</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/docs/api/configstoragemanager.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configstoragemodules.html" title="Configuration Storage Plugins"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="configstorage.html" title="ConfigStorage Class"
+             >previous</a> |</li>
+        <li><a href="../../index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li>
+          <li><a href="storage_classes.html" >Storage Manager Classes</a> &raquo;</li>
+          <li><a href="configstorage.html" >ConfigStorage Class</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

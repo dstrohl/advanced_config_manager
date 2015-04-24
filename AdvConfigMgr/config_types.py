@@ -5,11 +5,16 @@ __all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataT
 
 import ast
 import copy
-from AdvConfigMgr.utils import make_list, convert_to_boolean, slugify, get_after, get_before
-from AdvConfigMgr.config_validation import ValidationError
+from .utils import make_list, convert_to_boolean, slugify, get_after, get_before
+from .config_validation import ValidationError
+# from .config_exceptions import log
 from unicodedata import normalize
-from AdvConfigMgr.utils.unset import _UNSET
+from .utils.unset import _UNSET
 from distutils.version import LooseVersion, StrictVersion
+from .config_logging import get_log
+
+log = get_log(__name__)
+
 
 '''
 class ItemKey(object):
@@ -41,7 +46,7 @@ class ItemKey(object):
         self._sect_compare = self._xform_class.section(option, self._glob_chars)
 
     def _save_dot_not(self, name):
-        if self._sec_opt_sep is not None and self._sec_opt_sep in name:
+        if self._sec_opt_sep is not None and self._sec_opt_sep in name:a
             self._set_sec(get_before(name, self._sec_opt_sep))
             self._set_opt(get_after(name, self._sec_opt_sep))
             self._dot = True
@@ -226,8 +231,8 @@ class DataTypeBase(object):
         Should returns an object matching the datatype from a string
         Should be over-ridden for non-string types
         """
-        tmp_ret = self._type_class(ast.literal_eval(value))
-        return tmp_ret
+        return self._type_class(ast.literal_eval(value))
+
 
     def to_string(self, value):
         """
@@ -236,10 +241,15 @@ class DataTypeBase(object):
         return self._convert_to_string(value)
 
     def from_string(self, value, validate=True):
-        """
-        Returns an object matching the datatype from a string
-        """
-        return self._convert_from_string(value)
+        log.debug('convert from [%s]', value)
+        if isinstance(value, str):
+            return self._convert_from_string(value)
+        else:
+            if isinstance(value, self._type_class):
+                return value
+            else:
+                msg = '{} is not a string or {}'.format(value, self.name)
+                raise TypeError(msg)
 
     def __repr__(self):
         return 'Datatype Validator for: %s' % self.name

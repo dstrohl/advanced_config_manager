@@ -5,14 +5,17 @@ import copy
 import tempfile
 from pathlib import Path
 
-from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager, ip
-from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
+from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager
+from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError
 from AdvConfigMgr.config_storage import *
 
 from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
     DataTypeList, DataTypeStr, _UNSET
 
 from AdvConfigMgr.config_validation import ValidateNumRange, ValidationError
+
+from ..config_logging import get_log
+log = get_log(__name__)
 
 
 class TestClass(object):
@@ -147,10 +150,10 @@ class TestStorageManagers(unittest.TestCase):
         self.c = ConfigManager()
         self.c.add('section1', 'section2')
 
-        ip('TEST: Starting test ', self.id()).ms('test').a()
+        log.info('TEST: Starting test %s', self.id()).ms('test').a()
 
     def tearDown(self):
-        ip.mr('test').lp('TEST: Ending test ', self.id())
+        log.mem('test').info('TEST: Ending test %s', self.id())
 
     def test_dict_manager(self):
         self.c['section2'].storage_write_to = 'dict'
@@ -194,7 +197,7 @@ class TestStorageManagers(unittest.TestCase):
     def test_save_list(self):
 
         c = StringCfgManager()
-
+        c.storage._make_default('string')
         c.add_section('Section1')
 
         c['section1']['option1'] = 'test'
@@ -207,10 +210,11 @@ class TestStorageManagers(unittest.TestCase):
     def test_load_dict(self):
 
         test_dict = {'section1': {'option1': 'opt1',
-                                 'option2': 'opt2'}}
+                                  'option2': 'opt2'}}
 
         c = DictCfgManager()
 
+        c.storage._make_default('dict')
         c.add_section('Section1')
 
         c['section1']['option1'] = 'test'
@@ -269,4 +273,6 @@ class TestStorageManagers(unittest.TestCase):
 
         self.assertEqual(c['section1']['option2'], 'this')
         self.assertEqual(c['section2']['option4'], 'again')
+
+
 

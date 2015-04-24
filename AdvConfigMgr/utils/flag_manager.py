@@ -1,7 +1,7 @@
 __author__ = 'dstrohl'
 
 
-from AdvConfigMgr.utils.base_utils import list_in_list
+from .base_utils import list_in_list
 
 # ===============================================================================
 # Flag Manager

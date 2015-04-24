@@ -1,0 +1,405 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ConfigSection Class &mdash; Advanced Configuration Manager 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Advanced Configuration Manager 0.9 documentation" href="index.html" />
+    <link rel="up" title="Configuration and API" href="configuration.html" />
+    <link rel="next" title="ConfigOption Class" href="configoption.html" />
+    <link rel="prev" title="ConfigManager Class" href="configmanager.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="configoption.html" title="ConfigOption Class"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="configmanager.html" title="ConfigManager Class"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" accesskey="U">Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="configsection-class">
+<h1>ConfigSection Class<a class="headerlink" href="#configsection-class" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="AdvConfigMgr.ConfigSection">
+<em class="property">class </em><tt class="descclassname">AdvConfigMgr.</tt><tt class="descname">ConfigSection</tt><big>(</big><em>manager</em>, <em>name</em>, <em>verbose_name=None</em>, <em>description=None</em>, <em>storage_write_to=None</em>, <em>storage_read_from_only=None</em>, <em>store_default=False</em>, <em>locked=False</em>, <em>allow_create_on_load=True</em>, <em>option_defaults=None</em>, <em>dict_type=&lt;class 'collections.OrderedDict'&gt;</em>, <em>cli_section_title=None</em>, <em>cli_section_desc=None</em>, <em>section_version='0.0'</em>, <em>section_version_upgrade=None</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>A single section of a config</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section_version</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; This is the version of data that is stored in this section.</li>
+<li><strong>manager</strong> (<em>ConfigManager</em>) &#8211; A pointer to the config manager</li>
+<li><strong>name</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The name of the section</li>
+<li><strong>verbose_name</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The verbose name of the section</li>
+<li><strong>description</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; A long description of the section</li>
+<li><strong>storage_write_to</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The tag of the storage location to save to, if None, the section will be saved to
+the default location, if &#8216;-&#8216; it will not be saved in save_all operations, if &#8220;*&#8221;, section will be saved to
+all configured storage locations. Sections can be saved manually to any storage if needed.</li>
+<li><strong>or list storage_read_from_only</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; options from storage with tags in this list will be read.  If None (default)
+then options in storage will be always be used.  This allows restricting options to specific storage
+locations.
+CLI options, if configured, will always overwrite data from storage.</li>
+<li><strong>store_default</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; store defaults in storage medium</li>
+<li><strong>locked</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; if True, do not allow any changes to the section</li>
+<li><strong>dict_type</strong> &#8211; the dictionary type to be used.</li>
+<li><strong>cli_section_name</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the name of the section in the CLI (if sectioned), Defaults to verbose_name</li>
+<li><strong>cli_section_desc</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the description for the section in the CLI (if sectioned), Defaults to description</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.add">
+<tt class="descname">add</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds new option definition to the system</p>
+<p>args, kwargs: config options can also be passed in args/kwargs, in a number of formats.</p>
+<p>Examples:</p>
+<p>This does not set any default values:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">add</span><span class="p">(</span><span class="s">&#39;option1&#39;</span><span class="p">,</span> <span class="s">&#39;option2&#39;</span><span class="p">,</span> <span class="s">&#39;option3&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Seperate dictionaries:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">add</span><span class="p">(</span><span class="n">full_option_dict</span><span class="p">,</span> <span class="n">full_option_dict</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A list of dictionaries:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">add</span><span class="p">([</span><span class="n">full_option_dict</span><span class="p">,</span> <span class="n">full_option_dict</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>A list of sets with option_name and default value.:</p>
+<div class="highlight-python"><div class="highlight"><pre>add([(&#39;option1&#39;,default_value),(&#39;option2&#39;,default_value)]
+</pre></div>
+</div>
+<p>If default value is a dict, this will not work, if a dict is passed, it is assumed to be a full_option_dict:</p>
+<div class="highlight-python"><div class="highlight"><pre>add(option1=default_value1, option2=default_value2, option3=default_value3)
+
+add(option1={full_option_dict}, option2={full_option_dict))
+</pre></div>
+</div>
+<p>These can be mixed, so the following would be valid:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">add</span><span class="p">(</span><span class="s">&#39;option1&#39;</span><span class="p">,</span> <span class="n">full_option_dict</span><span class="p">,</span> <span class="p">[</span><span class="n">full_option_dict</span><span class="p">,</span> <span class="n">full_option_dict</span><span class="p">],</span> <span class="p">[(</span><span class="s">&#39;option2&#39;</span><span class="p">,</span><span class="n">default_value</span><span class="p">)])</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>full_option_dict Example (with defaults):</dt>
+<dd>&#8216;name&#8217;: &#8216;&lt;name of option&gt;&#8217;,
+&#8216;default_value&#8217;: _UNSET,
+&#8216;datatype&#8217;: None,
+&#8216;verbose_name&#8217;: None,
+&#8216;description&#8217;: None,
+&#8216;cli_option&#8217;: None,
+&#8216;validations&#8217;: None,
+&#8216;do_not_change&#8217;: False,
+&#8216;do_not_delete&#8217;: False,
+&#8216;required_after_load&#8217;: False,</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last">
+<li><p class="first">If a default value is a dictionary, it must be passed within a full option dict.</p>
+</li>
+<li><p class="first">See ConfigOption for option_dict parameters.</p>
+</li>
+<li><p class="first">If a full option dict is passed as an arg (not kwarg) it must contain a &#8216;name&#8217; key.</p>
+</li>
+<li><p class="first">Args and kwargs can be mixed if needed... for example this is also a valid approach:</p>
+<div class="highlight-python"><div class="highlight"><pre>add(option1, &lt;full_option_dict&gt;, option3=default_value, option4={full_option_dict}
+</pre></div>
+</div>
+</li>
+<li><p class="first">If options are repeated in the same commane, kwargs will take precdence over args,
+and new options will overwrite old ones.</p>
+</li>
+<li><p class="first">if there are existing options in the section with the same name, an error will be raised.</p>
+</li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.clear">
+<tt class="descname">clear</tt><big>(</big><em>option</em>, <em>forgiving=False</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will set the option to the default value or to unset as long as long as the section is not locked.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>option</strong> (<em>str or list</em>) &#8211; option name or list of option names</li>
+<li><strong>forgiving</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; True will return False if the option is not found, False, will raise NoOptionError.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if all deletes passed, False if not.  if False, a list of the failed options is stored in
+self.last_failure_list</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">bool</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises NoOptionError:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">If the option does not exist. and forgiving is False.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.defaults">
+<tt class="descname">defaults</tt><big>(</big><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.defaults" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns a dictionary of the default settings
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.delete">
+<tt class="descname">delete</tt><big>(</big><em>option</em>, <em>force=False</em>, <em>forgiving=False</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will delete a list of options.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>option</strong> &#8211; Option name or list of option names.</li>
+<li><strong>force</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; True will delete the object even if it has a default_value without checking for value or lock.</li>
+<li><strong>forgiving</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; True will return False if the option is not found, False, will raise NoOptionError.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Type:</th><td class="field-body"><p class="first">str or list</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if all deletes passed, False if not.  if False, a list of the failed options is stored in
+<tt class="xref py py-attr docutils literal"><span class="pre">ConfigSection.last_failure_list</span></tt></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.from_read">
+<tt class="descname">from_read</tt><big>(</big><em>option</em>, <em>value</em>, <em>raw=False</em>, <em>interpolater=None</em>, <em>validate=True</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.from_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>adds data from a storage module to the system, this ignores the &#8216;do_not_add&#8217; flag.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>value</strong> &#8211; the value to add</li>
+<li><strong>raw</strong> &#8211; </li>
+<li><strong>interpolater</strong> &#8211; </li>
+<li><strong>as_string</strong> &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.get">
+<tt class="descname">get</tt><big>(</big><em>option</em>, <em>fallback=Empty Value</em>, <em>raw=False</em>, <em>interpolater=None</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>gets the value of an option</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>option</strong> &#8211; the name of the option</li>
+<li><strong>fallback</strong> &#8211; a value to return if the option is empty</li>
+<li><strong>raw</strong> &#8211; a flag to skip interpolation</li>
+<li><strong>interpolater</strong> &#8211; the interpolator to use if not the standard one.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.items">
+<tt class="descname">items</tt><big>(</big><em>raw=False</em>, <em>interpolater=None</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.items" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of (name, value) tuples for each option in a section.</p>
+<p>All interpolations are expanded in the return values, based on the
+defaults passed into the constructor, unless the optional argument
+&#8216;raw&#8217; is true.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.load">
+<tt class="descname">load</tt><big>(</big><em>name</em>, <em>value</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads value into system, can create new options if &#8220;allow_create_on_load&#8221; is set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; Option Name</li>
+<li><strong>value</strong> &#8211; Option Value</li>
+<li><strong>args</strong> &#8211; as per ConfigOptionClass (passed through)</li>
+<li><strong>kwargs</strong> &#8211; as per ConfigOptionClass (passed through)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="AdvConfigMgr.ConfigSection.section_ok_after_load">
+<tt class="descname">section_ok_after_load</tt><a class="headerlink" href="#AdvConfigMgr.ConfigSection.section_ok_after_load" title="Permalink to this definition">¶</a></dt>
+<dd><p>validates that all options that are required &#8220;after_load&#8221; have either a set or default value</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Rtype boolean:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.set">
+<tt class="descname">set</tt><big>(</big><em>option</em>, <em>value</em>, <em>raw=False</em>, <em>interpolater=None</em>, <em>validate=True</em>, <em>force=False</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets an option value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>option</strong> &#8211; the name of the option to set</li>
+<li><strong>value</strong> &#8211; the value to set</li>
+<li><strong>raw</strong> &#8211; if set to True will bypass the interpolater</li>
+<li><strong>interpolater</strong> &#8211; can be used to override the default interpolater if needed.</li>
+<li><strong>validate</strong> &#8211; if False will bypass the validation steps</li>
+<li><strong>force</strong> &#8211; if True will bypass the lock checks</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">the interpolated value or default value.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="AdvConfigMgr.ConfigSection.to_write">
+<tt class="descname">to_write</tt><big>(</big><em>option</em>, <em>raw=False</em>, <em>interpolater=None</em>, <em>as_string=False</em><big>)</big><a class="headerlink" href="#AdvConfigMgr.ConfigSection.to_write" title="Permalink to this definition">¶</a></dt>
+<dd><p>gets data from the system to save to a storage module
+:param raw:
+:param interpolater:
+:param as_string:
+:return:</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="configmanager.html"
+                        title="previous chapter">ConfigManager Class</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="configoption.html"
+                        title="next chapter">ConfigOption Class</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/configsection.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="configoption.html" title="ConfigOption Class"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="configmanager.html" title="ConfigManager Class"
+             >previous</a> |</li>
+        <li><a href="index.html">Advanced Configuration Manager 0.9 documentation</a> &raquo;</li>
+          <li><a href="configuration.html" >Configuration and API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, Dan Strohl.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>
