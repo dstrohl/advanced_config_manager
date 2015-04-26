@@ -64,6 +64,20 @@ class BaseConfigStorageManager(object):
     """:param int priority: the priority of this manager, with smallest being run earlier than larger."""
     priority = 100
 
+    """:param bool autosave_eligable: True if this manager can be used for autosave"""
+    autosave_eligable = False
+
+    """:param str save_resolution: ['full'/'section'/'option']"""
+    save_resolution = 'full'
+
+    """
+    :param str full_save_action: ['merge'/'overwrite'] if resolution is 'full', action to take on save, 'merge' will
+        re-read the config, merge the section, and save the config, this insures saving the full config.  'overwrite'
+        will just save the specified sections, potentially losing any sections that were not marked to be saved.
+        overwrite is faster, but requires that you pay attention to the sections you are saving at each step.
+    """
+    full_save_action = 'merge'
+
     def __init__(self, storage_name=None):
         """
 
@@ -945,6 +959,9 @@ class ConfigFileStorage(ConfigStringStorage):
     priority = 50
     force_strings = True
     standard = True
+    autosave_eligable = True
+    save_resolution = 'full'
+    full_save_action = 'merge'
 
     _create_files = True
     _fail_if_no_file = False
@@ -1093,8 +1110,6 @@ class ConfigFileStorage(ConfigStringStorage):
         file = kwargs.get('file', None)
         encoding = kwargs.get('encoding', None)
 
-        data = self._dict_to_list(data_dict)
-
         exists = True
         if file is None:
             if self._write_filename is None:
@@ -1115,7 +1130,20 @@ class ConfigFileStorage(ConfigStringStorage):
             self._make_backup(filename.name)
 
         if file is None:
-            file = filename.open(mode='w', encoding=encoding)
+            file = filename.open(mode='rw', encoding=encoding)
+
+        if self.full_save_action == 'merge':
+            tmp_data = self.read_from_storage(flat=flat,
+                                              default_section_name=self.manager._no_section_section_name,
+                                              files=file,
+                                              encoding=encoding)
+
+            new_data = merge_dictionaries(data_dict, tmp_data)
+
+        else:
+            new_data = data_dict
+
+        data = self._dict_to_list(new_data)
 
         for l in data:
             file.write(l)
