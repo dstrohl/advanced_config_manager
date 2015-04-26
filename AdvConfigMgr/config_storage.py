@@ -163,7 +163,22 @@ class BaseConfigStorageManager(object):
                                                **kwargs)
         log.debug('dict from storage to save:').a()
         log.debug(str(tmp_read_dict)).s()
+
+        tmp_read_dict = self.manager.signal.pre_storage_manager_read(
+            storage_manager=self.storage_name,
+            sections=section_name,
+            override=override_tags,
+            value=tmp_read_dict,
+        )
+
         self._save_dict(tmp_read_dict, override_tags=override_tags)
+
+        self.manager.signal.post_storage_manager_read(
+            storage_manager=self.storage_name,
+            sections=section_name,
+            sections_read=self.last_section_count,
+            options_read=self.last_option_count
+        )
 
         return self.last_section_count, self.last_option_count
 
@@ -195,9 +210,21 @@ class BaseConfigStorageManager(object):
 
         tmp_dict = self._get_dict(section_name=section_name, override_tags=override_tags)
 
+        tmp_dict = self.manager.signal.post_storage_manager_write(
+            storage_manager=self.storage_name,
+            sections=section_name,
+            override=override_tags,
+            value=tmp_dict)
+
         self.data = self.write_to_storage(tmp_dict,
                                           flat=self.manager._no_sections,
                                           **kwargs)
+
+        self.manager.signal.post_storage_manager_write(
+            storage_manager=self.storage_name,
+            sections=section_name,
+            sections_written=self.last_section_count,
+            options_written=self.last_option_count)
 
         return self.last_section_count, self.last_option_count
 

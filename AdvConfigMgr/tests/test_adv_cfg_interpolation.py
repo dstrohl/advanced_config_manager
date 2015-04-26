@@ -1,10 +1,10 @@
 __author__ = 'dstrohl'
 
 import unittest
-from ..config_interpolation import Interpolation
-from ..config_transform import Xform
-from ..config_types import _UNSET
-from ..utils.base_utils import get_after, get_before
+from AdvConfigMgr.config_interpolation import Interpolation
+from AdvConfigMgr.config_transform import Xform
+# from AdvConfigMgr.config_types import _UNSET
+from AdvConfigMgr.utils.base_utils import get_after, get_before
 
 '''
 class MultiLevelDictManager(object):

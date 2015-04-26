@@ -4,16 +4,16 @@ import unittest
 import copy
 from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager
 from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError
-from AdvConfigMgr.config_storage import ConfigSimpleDictStorage
+# from AdvConfigMgr.config_storage import ConfigSimpleDictStorage
 # from AdvConfigMgr.config_ro_dict import ConfigDict
 
-from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
-    DataTypeList, DataTypeStr, _UNSET
+# from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
+#     DataTypeList, DataTypeStr, _UNSET
 
-from AdvConfigMgr.config_validation import ValidateNumRange, ValidationError
+from AdvConfigMgr.config_types import ValidateNumRange, ValidationError
 
 
-from ..config_logging import get_log
+from AdvConfigMgr.config_logging import get_log
 log = get_log(__name__)
 
 

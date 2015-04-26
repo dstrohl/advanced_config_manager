@@ -2,6 +2,9 @@ __author__ = 'dstrohl'
 
 import warnings
 from .utils import IndentedPrinter
+from .config_logging import get_log
+
+log = get_log(__name__)
 
 # log = IndentedPrinter().set_logger('CFG_MGR').set_logger_disp_level('debug')
 
@@ -12,6 +15,7 @@ class Error(Exception):
 
     def __init__(self, msg=''):
         self.message = msg
+        log.error(msg)
         Exception.__init__(self, msg)
 
     def __repr__(self):

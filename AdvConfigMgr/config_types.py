@@ -6,7 +6,6 @@ __all__ = ['DataTypeList', 'DataTypeStr', 'DataTypeFloat', 'DataTypeInt', 'DataT
 import ast
 import copy
 from .utils import make_list, convert_to_boolean, slugify, get_after, get_before
-from .config_validation import ValidationError
 # from .config_exceptions import log
 from unicodedata import normalize
 from .utils.unset import _UNSET
@@ -14,124 +13,6 @@ from distutils.version import LooseVersion, StrictVersion
 from .config_logging import get_log
 
 log = get_log(__name__)
-
-
-'''
-class ItemKey(object):
-    _sec_opt_sep = '.'
-    _def_glob_chars = '*?[]!'
-    _def_no_glob_chars = '_'
-
-    def __init__(self, name=None, **kwargs):
-
-        self._section = None
-        self._sect_compare = None
-        self._option = None
-        self._dot = False
-        self._xform_class = Xform()
-        
-        glob = kwargs.pop('glob', None)
-        if glob:
-            self._glob_chars = self._def_glob_chars
-        else:
-            self._glob_chars = self._def_no_glob_chars
-
-        self._save_and_xform(name=name, **kwargs)
-
-    def _set_sec(self, section):
-        self._section = self._xform_class.section(section, self._glob_chars)
-
-    def _set_opt(self, option):
-        self._option = self._xform_class.option(option, self._glob_chars)
-        self._sect_compare = self._xform_class.section(option, self._glob_chars)
-
-    def _save_dot_not(self, name):
-        if self._sec_opt_sep is not None and self._sec_opt_sep in name:a
-            self._set_sec(get_before(name, self._sec_opt_sep))
-            self._set_opt(get_after(name, self._sec_opt_sep))
-            self._dot = True
-            return None
-        if self._sec_opt_sep is None and self._sec_opt_sep in name:
-            msg = 'Dot Notation disabled : {}'.format(name)
-            raise AttributeError(msg)
-        return name
-
-    def _save_and_xform(self, name=None, **kwargs):
-
-        name = kwargs.get('name', name)
-        if name is not None:
-            if type(name) == type(self):
-                self._section = name.section
-                self._option = name.option
-                self._sect_compare = name._sect_compare
-
-            elif isinstance(name, str):
-                if self._save_dot_not(name) is not None:
-                    self._set_sec(name)
-                    self._set_opt(name)
-
-        if 'section' in kwargs:
-            section = kwargs['section']
-
-            if isinstance(section, str):
-                if self._save_dot_not(section) is not None:
-                    self._set_sec(section)
-            elif type(section) == type(self):
-                self._section = name.section
-            else:
-                self._section = section
-
-        if 'option' in kwargs:
-            option = kwargs['option']
-
-            if isinstance(option, str):
-                if self._save_dot_not(option) is not None:
-                    self._set_opt(option)
-            elif type(option) == type(self):
-                self._option = name.option
-            else:
-                self._option = option
-
-        return self
-
-    @property
-    def section(self):
-        return self._section
-
-    @property
-    def option(self):
-        return self._option
-
-    @property
-    def s(self):
-        return self._section
-
-    @property
-    def o(self):
-        return self._option
-
-    @property
-    def has_both(self):
-        return self._section == self._sect_compare
-
-    def __str__(self):
-        if self._section == self._sect_compare:
-            return self.s
-        else:
-            return '{}{}{}'.format(self.s, self._sec_opt_sep, self.o)
-
-    def __call__(self, name=None, **kwargs):
-        return self._save_and_xform(name, **kwargs)
-
-    def __eq__(self, other):
-        if isinstance(other, str):
-            return str(self) == other
-        elif type(other) == type(self):
-            return str(self) == str(other)
-
-    def __repr__(self):
-        return str(self)
-'''
 
 
 class DataTypeGenerator(object):
@@ -319,3 +200,76 @@ class DataTypeStrictVersion(DataTypeBase):
 
 data_type_generator = DataTypeGenerator(DataTypeFloat, DataTypeList, DataTypeStr,
                                         DataTypeInt, DataTypeDict, DataTypeBoolean)
+
+
+
+
+class ValidationError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
+class ValidationWarning(Warning):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
+class ValidationsBase(object):
+    """
+    This is the base object that all other validation objects shoudl be based on.  it is pretty simple at this point
+    and is mainly a framework for consistency.
+    """
+
+    def validate(self, data):
+        """
+        This is the main method for validation.  This is called by the configuration manager and the data is passed to
+        it.  it should return that same data if it is validated, or raise an error or warning if not.
+
+        Raising an error will stop the processing, raising a warning will simply log the problem, and the developer
+        can choose to poll the error queue and display the errors.
+
+        :param data:
+        :return:
+        """
+        return data
+
+
+class ValidateStrEqual(ValidationsBase):
+    def __init__(self, match_str):
+        self.match_str = match_str
+
+    def validate(self, data):
+        if self.match_str == data:
+            return self.match_str
+        else:
+            raise ValidationError('ValidationError: '+self.match_str+' does not match '+data)
+
+
+class ValidateStrExists(ValidationsBase):
+    def validate(self, data):
+        if data is not None and data != '':
+            return data
+        else:
+            raise ValidationError('ValidationError: data cannot be empty')
+
+
+class ValidateNumRange(ValidationsBase):
+    def __init__(self, num_from=None, num_to=None):
+        self.num_from = num_from
+        self.num_to = num_to
+
+    def validate(self, data):
+        if self.num_from and data < self.num_from:
+            raise ValidationError('ValidationError: '+str(data)+' is smaller than  '+str(self.num_from))
+
+        if self.num_to and data > self.num_to:
+            raise ValidationError('ValidationError: '+str(data)+' is larger than  '+str(self.num_from))
+
+        return data
+

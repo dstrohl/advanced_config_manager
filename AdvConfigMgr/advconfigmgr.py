@@ -8,6 +8,7 @@ from .config_migrate import ConfigMigrationManager
 from .config_logging import enter, leave, get_log, dns
 from .utils.unset import _UNSET
 from .config_transform import Xform
+from .config_signals import SignalManager
 # from .config_ro_dict import ConfigDict
 from .utils import args_handler, convert_to_boolean, make_list, slugify, get_after, get_before
 import copy
@@ -173,6 +174,10 @@ class ConfigOption(object):
         return self._datatype_manager(value)
 
     @property
+    def signal(self):
+        return self._manager._signal
+
+    @property
     def can_delete(self):
         tmp_ret = (self.default_value == _UNSET) and (not self.do_not_delete)
         log.debug('check delete [%s]', self.path).a()
@@ -190,19 +195,32 @@ class ConfigOption(object):
             return True
 
     def clear(self):
+        
         log.debug('clear option [%s]', self.path).a()
+        
+        tmp_ok_to_clear = self.signal.pre_clear(section=self._section.name,
+                                                option=self.name,
+                                                current_value=self._value,
+                                                default_value=self.default_value,
+                                                value=True)
 
-        if self.has_set_value:
-            if self.has_default_value:
+        if tmp_ok_to_clear:        
+            if self.has_set_value:
+                if self.has_default_value:
+    
+                    self._value = self.default_value
+                    log.debug('setting to default value: %s', self.default_value).s()
+                else:
+                    self._value = _UNSET
+                    log.debug('setting to _UNSET').s()
 
-                self._value = self.default_value
-                log.debug('setting to default value: %s', self.default_value).s()
-            else:
-                self._value = _UNSET
-                log.debug('setting to _UNSET').s()
+        tmp_ok_to_del = self.signal.post_clear(section=self._section.name,
+                                               option=self.name,
+                                               value=True)
 
-        if not self.keep_if_empty and not self.has_default_value:
-            self._section.delete(self.name, force=True)
+        if tmp_ok_to_del:
+            if not self.keep_if_empty and not self.has_default_value:
+                self._section.delete(self.name, force=True)
 
     def delete(self):
         return self._section.delete(self.name)
@@ -230,11 +248,20 @@ class ConfigOption(object):
         :return: the interpolated value or default value.
         """
         tmp_ret = self._get(as_string=as_string)
+        tmp_ret = self.signal.pre_get(section=self._section.name,
+                                      option=self.name,
+                                      value=tmp_ret)
         if not raw:
             tmp_ret = self._manager._interpolator.before_get(self._section.name, tmp_ret)
+
+        tmp_ret = self.signal.post_get(section=self._section.name,
+                                       option=self.name,
+                                       value=tmp_ret)
+
         return tmp_ret
 
-    def to_write(self, raw=False, as_string=False):
+
+    def to_write(self, raw=False, as_string=False, storage_manager=None):
         """
         gets data from the system to save to a storage module,
 
@@ -244,9 +271,21 @@ class ConfigOption(object):
         :return: the interpolated value or default value.
         """
         tmp_ret = self._get(as_string=as_string)
+
+        tmp_ret = self.signal.pre_write(storage_manager=storage_manager,
+                                        section=self._section.name,
+                                        option=self.name,
+                                        value=tmp_ret)
         if not raw:
             tmp_ret = self._manager._interpolator.before_write(self._section.name, tmp_ret)
+
+        tmp_ret = self.signal.post_write(storage_manager=storage_manager,
+                                         section=self._section.name,
+                                         option=self.name,
+                                         value=tmp_ret)
+
         return tmp_ret
+
 
     def _set(self, value, validate=True, force=False, from_string=False):
         """
@@ -296,12 +335,22 @@ class ConfigOption(object):
         :param force: if True will bypass the lock checks
         :return: the interpolated value or default value.
         """
-        if not raw:
-            tmp_ret = self._manager._interpolator.before_set(self._section.name, value)
-        else:
-            tmp_ret = value
+        tmp_ret = self.signal.pre_set(section=self._section.name,
+                                      option=self.name,
+                                      value=value)
 
-        return self._set(tmp_ret, validate=validate, force=force)
+        if not raw:
+            tmp_ret = self._manager._interpolator.before_set(self._section.name, tmp_ret)
+        else:
+            tmp_ret = tmp_ret
+
+        tmp_ret = self._set(tmp_ret, validate=validate, force=force)
+
+        self.signal.post_set(section=self._section.name,
+                             option=self.name,
+                             value=tmp_ret)
+
+        return tmp_ret
 
     def from_read(self, value, raw=False, validate=True, from_string=False):
         """
@@ -313,12 +362,22 @@ class ConfigOption(object):
         :param from_string: if True will convert from string
         :return: the interpolated value or default value.
         """
-        if not raw:
-            tmp_ret = self._manager._interpolator.before_read(self._section.name, value)
-        else:
-            tmp_ret = value
+        tmp_ret = self.signal.pre_read(section=self._section.name,
+                                       option=self.name,
+                                       value=value)
 
-        return self._set(tmp_ret, validate=validate, force=True, from_string=from_string)
+        if not raw:
+            tmp_ret = self._manager._interpolator.before_read(self._section.name, tmp_ret)
+        else:
+            tmp_ret = tmp_ret
+
+        tmp_ret = self._set(tmp_ret, validate=validate, force=True, from_string=from_string)
+
+        self.signal.pre_read(section=self._section.name,
+                             option=self.name,
+                             value=tmp_ret)
+
+        return tmp_ret
 
     # *******************************************************************************************************
     # ****  OPTION : Pass through methods
@@ -773,21 +832,30 @@ class ConfigSection(object):
             section, option = self._xf(o)
             if self._xf_this_sec(section):
                 log.debug('trying option: %s', option)
-
                 try:
-                    opt = self._options[option]
-                    if opt.has_default_value and not force:
-                        log.debug('section %s, delete-clearing option %s', self._name, option)
-                        opt.clear()
-                    elif not opt.do_not_delete or force:
-                        log.debug('section %s, delteing option %s', self._name, option)
-                        del self._options[option]
-                        #del self._data[option]
-                        #self._data_lock()
-                    else:
-                        log.debug('option %s delete perhibited', option)
-                        self.last_failure_list.append(option)
-                        tmp_ret = False
+                    tmp_ok_to_delete = self.signal.pre_delete(
+                        section=self.name,
+                        option=o,
+                        value=True
+                    )
+                    if tmp_ok_to_delete:
+                        opt = self._options[option]
+                        if opt.has_default_value and not force:
+                            log.debug('section %s, delete-clearing option %s', self._name, option)
+                            opt.clear()
+                        elif not opt.do_not_delete or force:
+                            log.debug('section %s, delteing option %s', self._name, option)
+                            del self._options[option]
+                            #del self._data[option]
+                            #self._data_lock()
+                        else:
+                            log.debug('option %s delete perhibited', option)
+                            self.last_failure_list.append(option)
+                            tmp_ret = False
+                    self.signal.post_delete(
+                        section=self.name,
+                        option=o)
+
                 except KeyError:
                     log.debug('option %s not found', option)
                     if forgiving:
@@ -795,6 +863,7 @@ class ConfigSection(object):
                         tmp_ret = False
                     else:
                         raise NoOptionError(option=option, section=section)
+
             else:
                 self._manager[section].delete(option, force=force, forgiving=forgiving)
         return tmp_ret
@@ -855,6 +924,10 @@ class ConfigSection(object):
             self._manager._cli_args[tmp_dest] = option
         log.s()
 
+    @property
+    def signal(self):
+        return self._manager._signal
+
     def load(self, option, value, *args, **kwargs):
         """
         Loads value into system, can create new options if "allow_create_on_load" is set.
@@ -872,7 +945,7 @@ class ConfigSection(object):
             if 'datatype' not in kwargs:
                 kwargs['datatype'] = value.__class__.__name__
 
-            self._add(option, *args, force_load=True, **kwargs)
+            self._add(option, force_load=True, **kwargs)
 
         self.set(option, value)
 
@@ -975,7 +1048,8 @@ class ConfigSection(object):
             elif isinstance(o, str):
                 self._add(o, force_load=force_load)
 
-    def _add(self, name, *args, **kwargs):
+    # def _add(self, name, *args, **kwargs):
+    def _add(self, name, **kwargs):
         """
         Adds new option definition to the system
         :param str name: option name
@@ -983,6 +1057,12 @@ class ConfigSection(object):
         :param dict kwargs: as per ConfigOptionClass (passed through)
         :return:
         """
+        kwargs = self.signal.pre_create(
+            section=self.name,
+            option=name,
+            value=kwargs
+        )
+
         with_defaults = copy.copy(self.option_defaults)
         with_defaults.update(kwargs)
 
@@ -998,12 +1078,18 @@ class ConfigSection(object):
         section, option = self._xf(name)
         if self._xf_this_sec(section):
             # tmp_data_rec = self._data.add(option, _UNSET)
-            self._options[option] = ConfigOption(self, option, *args, **with_defaults)
+            self._options[option] = ConfigOption(self, option, **with_defaults)
             # self._data_lock()
         else:
             if force:
                 kwargs['force_load'] = True
-            self._manager[section]._add(option, *args, **kwargs)
+            self._manager[section]._add(option, **kwargs)
+
+        self.signal.post_create_option(
+            section=self.name,
+            option=name,
+        )
+
 
     @property
     def name(self):
@@ -1048,44 +1134,45 @@ class ConfigSection(object):
 
 class ConfigManager(object):
     """
-    :param allow_no_value: allow empty values.
-    :param empty_lines_in_values:
-    :param allow_add_from_storage: allow adding sections and options directly from the storage
-    :param allow_create_on_set: allows sections to be created when the set command is used.
+
+    :attr allow_no_value: allow empty values.
+    :attr empty_lines_in_values:
+    :attr allow_add_from_storage: allow adding sections and options directly from the storage
+    :attr allow_create_on_set: allows sections to be created when the set command is used.
         the set command can only be used to set the values of options, so this REQUIRES using dot-notation.
-    :param no_sections: this will disable all sections and all options will be accessible from the base manager
+    :attr no_sections: this will disable all sections and all options will be accessible from the base manager
         object.  (this creates a section named "default_section".)
         .. warning:: converting from simple configurations to sections may require manual data minipulation!
-    :param section_defaults: a dictionary of settings used as defaults for all sections created
-    :param interpolation: can be defined if interpolation is requested or required.
-    :param str section_option_sep: defines a seperator character to use for getting options using the dot_notation
+    :attr section_defaults: a dictionary of settings used as defaults for all sections created
+    :attr interpolation: can be defined if interpolation is requested or required.
+    :attr str section_option_sep: defines a seperator character to use for getting options using the dot_notation
         style of query. defaults to '.', in which case options can be queried by calling
         ConfigManager[section.option] in addition to ConfigManager[section][option].  If this is set to None, dot
         notation will be disabled.
-    :param cli_program: the name of the program for the cli help screen (by default this will use the program run
+    :attr cli_program: the name of the program for the cli help screen (by default this will use the program run
         to launch the app)
-    :param cli_desc: the text to show above the arguments in the cli help screen.
-    :param cli_epilog: the text to show at the end of the arguments in the cli help screen.
-    :param raise_error_on_locked_edit: if True, will raise an error if an attempt to change locked options,
+    :attr cli_desc: the text to show above the arguments in the cli help screen.
+    :attr cli_epilog: the text to show at the end of the arguments in the cli help screen.
+    :attr raise_error_on_locked_edit: if True, will raise an error if an attempt to change locked options,
         if False (default) the error is suppressed and the option will not be changed.
-    :param storage_managers: a list of storage managers to use, if none are passed, the configuration will not be
+    :attr storage_managers: a list of storage managers to use, if none are passed, the configuration will not be
         able to be saved.
-    :param cli_parser_name: the name of the cli parser if not the default.  set to None if the CLI parser
+    :attr cli_parser_name: the name of the cli parser if not the default.  set to None if the CLI parser
         is not to be used.
-    :param cli_group_by_section: True if cli arguments shoudl be grouped by section for help screens.
-    :param version_class: 'loose', 'strict', a subclass of the Version class or None for no versioning.
+    :attr cli_group_by_section: True if cli arguments shoudl be grouped by section for help screens.
+    :attr version_class: 'loose', 'strict', a subclass of the Version class or None for no versioning.
     :type version_class: Version or str or None
-    :param str version: the version number string.
-    :param str version_option_name: the option named used to store the version for each section, {section} will be
+    :attr str version: the version number string.
+    :attr str version_option_name: the option named used to store the version for each section, {section} will be
         replaced by the name of the section.
-    :param bool version_allow_unversioned: if True, the system will import unversioned data, if false, the version
+    :attr bool version_allow_unversioned: if True, the system will import unversioned data, if false, the version
         of the data must be specified when importing any data.
-    :param bool version_enforce_versioning: if True, the system will raise an error if no version is set at the
+    :attr bool version_enforce_versioning: if True, the system will raise an error if no version is set at the
         section or base level.
-    :param bool version_disable_cross_section_copy:  if True, cross section copy will not work.  Used when you have
+    :attr bool version_disable_cross_section_copy:  if True, cross section copy will not work.  Used when you have
         plugins from different authors and you want to segment them.
-    :param list version_make_migrations: this is a list of migrations that can be performed, (see :doc:`migration`\ )
-    :param kwargs: if "no_sections" is set, all section options can be passed to the ConfigManager object.
+    :attr list version_make_migrations: this is a list of migrations that can be performed, (see :doc:`migration`)
+    :attr kwargs: if "no_sections" is set, all section options can be passed to the ConfigManager object.
     """
     _name = 'System Configuration'
 
@@ -1094,6 +1181,7 @@ class ConfigManager(object):
     _DEFAULT_STORAGE_PLUGINS = (ConfigFileStorage, )
     _DEFAULT_STORAGE_MANAGER = StorageManagerManager
     _DEFAULT_CLI_MANAGER = ConfigCLIStorage
+    _DEFAULT_SIGNAL_MANAGER = SignalManager
     _DEFAULT_XFORM = Xform
     _DEFAULT_SECTION_CLASS = ConfigSection
     _DEFAULT_OPTION_CLASS = ConfigOption
@@ -1105,6 +1193,19 @@ class ConfigManager(object):
                            DataTypeFloat, DataTypeList, DataTypeStr, DataTypeLooseVersion,
                            DataTypeStrictVersion)
     _DEFAULT_DICT_TYPE = OrderedDict
+
+    # Signals
+    _default_signal_set = (
+        'pre_write', 'post_write', 'pre_read', 'post_read',
+        'pre_get', 'post_get', 'pre_set', 'post_set',
+        'pre_create', 'post_create',
+        'pre_clear', 'post_clear',
+        'pre_delete', 'post_delete',
+        'pre_create_option', 'post_create_option',
+        'pre_create_section', 'post_create_section',
+        'pre_storage_manager_read', 'post_storage_manager_read',
+        'pre_storage_manager_write', 'post_storage_manager_write',
+        )
 
     # Storgae Options
     _default_cli_name = 'cli'
@@ -1175,7 +1276,7 @@ class ConfigManager(object):
         log.debug('Default Stor Mgrs    : %s', default_storage_managers)
         log.debug('Initial Section List : %s', section_list).s()
 
-
+        self._signal = self._DEFAULT_SIGNAL_MANAGER(self, self._default_signal_set)
 
         if self._no_sections:
             self._section_option_sep = None
@@ -1356,11 +1457,14 @@ class ConfigManager(object):
 
         kwargs['version_migrations'] = self.get_sec_migrations(section)
 
+        kwargs = self.signal.pre_create_section(section=section, value=kwargs)
         if section in self._sections:
             raise DuplicateSectionError(section)
         # tmp_data_rec = self._data.add(section)
         self._sections[section] = ConfigSection(self, section, **kwargs)
         # self._data_lock()
+
+        self.signal.post_create_section(section=section)
 
     def add(self, *args, **kwargs):
         """
@@ -1450,6 +1554,10 @@ class ConfigManager(object):
     @property
     def storage(self):
         return self._storage
+
+    @property
+    def signal(self):
+        return self._signal
 
     def write(self, sections=None, storage_names=None, override_tags=False, **kwargs):
         """
