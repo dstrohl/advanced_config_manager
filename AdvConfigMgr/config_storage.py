@@ -1130,12 +1130,14 @@ class ConfigFileStorage(ConfigStringStorage):
             self._make_backup(filename.name)
 
         if file is None:
-            file = filename.open(mode='rw', encoding=encoding)
+            file = filename.open(mode='w', encoding=encoding)
+
 
         if self.full_save_action == 'merge':
+            read_file = file.name
             tmp_data = self.read_from_storage(flat=flat,
                                               default_section_name=self.manager._no_section_section_name,
-                                              files=file,
+                                              files=read_file,
                                               encoding=encoding)
 
             new_data = merge_dictionaries(data_dict, tmp_data)
@@ -1169,7 +1171,8 @@ class StorageManagerManager(object):
                  cli_parser_name='cli',
                  cli_manager=None,
                  storage_config=None,
-                 default_storage_managers=None):
+                 default_storage_managers=None,
+                 autosave_list=None):
         """
         :param config_manager: a link to the ConfigurationManager object
         :param managers: the manager classes to be registered.  managers can also be passed in a list of sets, for
@@ -1189,7 +1192,7 @@ class StorageManagerManager(object):
         self.config_manager = config_manager
         self.storage_managers = {}
         self.default_manager_list = []
-
+        self.autosave_list = autosave_list or []
         if default_storage_managers is None:
             self.default_managers = []
         else:
@@ -1271,12 +1274,17 @@ class StorageManagerManager(object):
         auto_load = False
         if self.config_manager._autoload_names is not None:
             if '*' in self.config_manager._autoload_names and is_default:
-               auto_load = True
+                auto_load = True
             elif storage_manager.storage_name in self.config_manager._autoload_names:
                 auto_load = True
 
         if auto_load:
             self.read(storage_names=storage_manager.storage_name)
+
+        if not self.autosave_list:
+            if storage_manager.autosave_eligable:
+                self.autosave_list.append(storage_manager.storage_name)
+
 
     def remove_storage(self, storage_name):
         if storage_name in self.storage_managers:
@@ -1367,6 +1375,10 @@ class StorageManagerManager(object):
         log.info('sections: %s', tmp_section_count)
         log.info('options: %s', tmp_option_count)
         log.info('managers: %s', tmp_storage_manager_count).s()
+
+    def autosave(self, sections=None, options=None):
+        for sm in self.autosave_list:
+            self.write(sections=sections, storage_names=sm, options=options)
 
     def write(self, sections=None, storage_names=None, override_tags=False, **kwargs):
         """

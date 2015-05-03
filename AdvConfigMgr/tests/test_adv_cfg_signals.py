@@ -8,7 +8,7 @@ class TestSignalTimes2(BaseSignalHandler):
     _default_priority = 20
 
     def process(self, **kwargs):
-        value = kwargs.get('value')
+        value = kwargs['value']
         value *= 2
         return value
 
@@ -17,7 +17,7 @@ class TestSignalPlus100(BaseSignalHandler):
     _default_priority = 100
 
     def process(self, **kwargs):
-        value = kwargs.get('value')
+        value = kwargs['value']
         value += 100
         return value
 
