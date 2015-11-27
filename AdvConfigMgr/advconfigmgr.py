@@ -120,20 +120,19 @@ ConfigParser -- responsible for parsing a list of
         between keys and values are surrounded by spaces.
 """
 
-from AdvConfigMgr.config_exceptions import *
-from AdvConfigMgr.config_interpolation import Interpolation, NoInterpolation
-from AdvConfigMgr.config_types import *
-from AdvConfigMgr.config_storage import *
-from AdvConfigMgr.config_migrate import ConfigMigrationManager
-from AdvConfigMgr.utils.unset import _UNSET
-from AdvConfigMgr.config_transform import Xform
-from AdvConfigMgr.config_ro_dict import ConfigDict
-
-from AdvConfigMgr.utils import args_handler, convert_to_boolean, make_list, slugify, get_after, get_before
 import copy
-from distutils.version import StrictVersion, LooseVersion, Version
-
 from collections import OrderedDict
+from distutils.version import LooseVersion, Version
+
+from AdvConfigMgr.config_exceptions import *
+from AdvConfigMgr.config_interpolation import Interpolation
+from AdvConfigMgr.config_migrate import ConfigMigrationManager
+from AdvConfigMgr.config_ro_dict import ConfigDict
+from AdvConfigMgr.config_transform import Xform
+from AdvConfigMgr.config_types import *
+from AdvConfigMgr.storage_managers.config_storage import *
+from AdvConfigMgr.utils import args_handler, make_list
+from AdvConfigMgr.utils.unset import _UNSET
 
 __all__ = ['ConfigManager', 'ConfigSection', 'ConfigOption']
 
@@ -1233,7 +1232,7 @@ class ConfigManager(object):
         """
 
         :param ConfigDict data_dict: any dictionary that can support the number of levels needed.
-        :param str version: the sering version number.
+        :param str version: the string version number.
         :param list migrations: a list of migration dictionaries.
         :param dict storage_config: a dictionary of storage configuration dictionaries.  These would be in the format
             of {'storage_name':{<config_dict>},'storage_name':{<config_dict>}}.  See specific storage managers for

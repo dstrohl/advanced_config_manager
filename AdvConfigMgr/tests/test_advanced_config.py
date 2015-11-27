@@ -1,16 +1,11 @@
 __author__ = 'dstrohl'
 
-import unittest
 import copy
-from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager, ip
+import unittest
+
+from AdvConfigMgr.advconfigmgr import ConfigManager
 from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
-from AdvConfigMgr.config_storage import ConfigSimpleDictStorage
-from AdvConfigMgr.config_ro_dict import ConfigDict
-
-from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
-    DataTypeList, DataTypeStr, _UNSET
-
-from AdvConfigMgr.config_validation import ValidateNumRange, ValidationError
+from AdvConfigMgr.config_validation import ValidationError
 
 
 class TestClass(object):

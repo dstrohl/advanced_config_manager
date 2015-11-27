@@ -3,8 +3,8 @@ __author__ = 'dstrohl'
 import unittest
 
 from AdvConfigMgr.advconfigmgr import ConfigManager
-from AdvConfigMgr.config_storage import *
 from AdvConfigMgr.config_exceptions import NoOptionError
+from AdvConfigMgr.storage_managers.config_storage import *
 
 class TestMigrations(unittest.TestCase):
 

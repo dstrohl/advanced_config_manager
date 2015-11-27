@@ -17,7 +17,7 @@ __all__ = ['BaseConfigStorageManager', 'StorageManagerManager', 'ConfigCLIStorag
 
 class BaseConfigStorageManager(object):
     """
-    Base class for storage managers, efines an expandable storage subsystem for configs.
+    Base class for storage managers, defines an expandable storage subsystem for configs.
 
     Also, the two methods; BaseConfigStorageManager.read() and BaseConfigStorageManager.write() need to be overwritten
     to read and write the data in the format needed.
@@ -113,7 +113,7 @@ class BaseConfigStorageManager(object):
         if the implementation tries to pass data directly to the file manager for importing, it will save the data in
         :py:meth:`BaseConfigStorageManager.data` where you can read it, so you should check this before processing.
 
-        You shoudl keep track of the number of sections and options written/read and return these at the end::
+        You should keep track of the number of sections and options written/read and return these at the end::
 
             return self.last_section_count, self.last_option_count
         """
@@ -137,7 +137,7 @@ class BaseConfigStorageManager(object):
         if you want to return data direct from the write method, you should copy it
         to :py:meth:`BaseConfigStorageManager.data` after processing.
 
-        you shoudl keep track of the number of sections and options written/read and return these at the end::
+        you should keep track of the number of sections and options written/read and return these at the end::
 
             return self.last_section_count, self.last_option_count
         """
@@ -1130,7 +1130,7 @@ class StorageManagerManager(object):
         # storage_manager.config(self._storage_config[storage_manager.storage_name])
 
         if self.default_managers is not None and storage_manager.storage_name in self.default_managers:
-            ip.a().debug('is lilsted as a default manager').s()
+            ip.a().debug('is listed as a default manager').s()
             self.manager_list.append(storage_manager)
         elif not self.default_managers and storage_manager.standard:
             ip.a().debug('is a standard manager (and no listings present').s()

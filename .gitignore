@@ -52,3 +52,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Credential Files
+storage_managers/tests/test_creds.py

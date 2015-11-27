@@ -1,19 +1,14 @@
 __author__ = 'dstrohl'
 
 import unittest
-import copy
-import tempfile
 from pathlib import Path
 
-from AdvConfigMgr.advconfigmgr import ConfigOption, ConfigSection, ConfigManager, ip
-from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
-from AdvConfigMgr.config_storage import *
+from AdvConfigMgr.advconfigmgr import ConfigManager
+from AdvConfigMgr.config_exceptions import ip
+from AdvConfigMgr.storage_managers.config_storage import *
+from AdvConfigMgr.storage_managers.storage_mongodb import *
 
-from AdvConfigMgr.config_types import DataTypeGenerator, DataTypeDict, DataTypeFloat, DataTypeInt, \
-    DataTypeList, DataTypeStr, _UNSET
-
-from AdvConfigMgr.config_validation import ValidateNumRange, ValidationError
-
+from AdvConfigMgr.storage_managers.tests.credentials import *
 
 class TestClass(object):
     t = 'teststring'
@@ -21,15 +16,8 @@ class TestClass(object):
     def __str__(self):
         return self.t
 
-class DictCfgManager(ConfigManager):
-    _DEFAULT_STORAGE_PLUGINS = (ConfigSimpleDictStorage, ConfigCLIStorage)
-
-
-class FileCfgManager(ConfigManager):
-    _DEFAULT_STORAGE_PLUGINS = (ConfigFileStorage, ConfigCLIStorage)
-
-class StringCfgManager(ConfigManager):
-    _DEFAULT_STORAGE_PLUGINS = (ConfigStringStorage, ConfigCLIStorage)
+class MongoCfgManager(ConfigManager):
+    _DEFAULT_STORAGE_PLUGINS = (MongoStorageManager, ConfigCLIStorage)
 
 
 class TestStorageManagers(unittest.TestCase):
@@ -152,121 +140,22 @@ class TestStorageManagers(unittest.TestCase):
     def tearDown(self):
         ip.mr('test').lp('TEST: Ending test ', self.id())
 
-    def test_dict_manager(self):
-        self.c['section2'].storage_write_to = 'dict'
-        self.c['section2']['option2'] = 'test'
-        self.c.storage.register_storage(ConfigSimpleDictStorage)
-        tmp_dict = self.c.write(storage_names='dict')
-        tmp_ret_1 = {'SECTION2': {'option2': 'test'}}
-
-        #ip.si(False)
-        #ip.debug('TMP_DICT   : ', tmp_dict)
-
-        self.assertEqual(tmp_dict, tmp_ret_1)
-
-    def test_dict_manager_save_default(self):
-        self.c['section2'].storage_write_to = 'dict'
-        self.c['section2'].store_default = True
-        self.c['section2']['option2'] = 'test'
-        self.c.storage.register_storage(ConfigSimpleDictStorage)
-        tmp_dict = self.c.write(storage_names='dict')
-        tmp_ret_1 = {'SECTION_STD': {}, 'SECTION_LOCKED': {}, 'SECTION_DISALLOW_CREATE': {}, 'SECTION2': {'option3': 'opt3', 'od_int1_do_not_change': 1, 'od_string2_default': 'default_od_string', 'option5': 'opt5', 'option2': 'test'}}
-        print(tmp_dict)
-
-    def test_load_list(self):
-
-        test_list = [
-            '[Section1]',
-            'option1=opt1',
-            'option2=opt2',
-            'option3=opt3']
-
-        c = StringCfgManager()
-
-        c.add_section('Section1')
-
-        c['section1']['option1'] = 'test'
-
-        c.read(data=test_list, storage_names='string')
-
-        self.assertEqual(c['Section1']['option1'], 'opt1')
-
-    def test_save_list(self):
-
-        c = StringCfgManager()
-
-        c.add_section('Section1')
-
-        c['section1']['option1'] = 'test'
-
-
-        tmp_list = c.write(storage_names='string')
-
-        self.assertEqual(tmp_list, ['[SECTION1]', 'option1 = test'])
-
-    def test_load_dict(self):
-
-        test_dict = {'section1': {'option1': 'opt1',
-                                 'option2': 'opt2'}}
-
-        c = DictCfgManager()
-
-        c.add_section('Section1')
-
-        c['section1']['option1'] = 'test'
-
-        c.read(data=test_dict, storage_names='dict')
-
-        self.assertEqual(c['Section1']['option1'], 'opt1')
-
-    def test_save_dict(self):
-
-        c = DictCfgManager(default_storage_managers='dict')
-
-        c.add_section('Section1')
-
-        c['section1']['option1'] = 'test'
-
-        tmp_list = c.write(storage_names='dict')
-
-        self.assertEqual(tmp_list, {'SECTION1': {'option1': 'test'}})
-
     def test_save_file(self):
-        tmp_filename = Path(self.tmp_ini_path, 'test_ini_file.ini')
 
-        tmp_filename_dict = {'file': {'filename': tmp_filename}}
-
-        c = FileCfgManager(storage_config=tmp_filename_dict)
-        d = FileCfgManager(storage_config=tmp_filename_dict)
+        storage_config = {'mongo': {'connection': MONGO_DB_CONNECTION}}
+        c = MongoCfgManager(default_storage_managers='mongo', storage_config=storage_config)
+        d = MongoCfgManager(default_storage_managers='mongo', storage_config=storage_config)
 
         c.add_section('Section1')
 
         c['section1']['option1'] = 'test'
 
-        c.write(storage_names='file')
+        c.write()
 
         d.add_section('Section1')
 
         d['section1']['option1'] = 'nothing'
 
-        d.read(storage_names='file')
+        d.read()
 
         self.assertEqual(d['section1']['option1'], 'test')
-
-    def test_load_file(self):
-        tmp_filename = Path(self.tmp_ini_path, 'test_ini_read_file.ini')
-
-        tmp_filename_dict = {'file': {'filename': tmp_filename}}
-
-        c = FileCfgManager(storage_config=tmp_filename_dict)
-
-        c.add_section('Section1')
-        c.add_section('section2')
-
-        c['section1']['option1'] = 'test'
-
-        c.read(storage_names='file')
-
-        self.assertEqual(c['section1']['option2'], 'this')
-        self.assertEqual(c['section2']['option4'], 'again')
-
