@@ -1,8 +1,8 @@
 __author__ = 'dstrohl'
 
+from AdvConfigMgr.exceptions.config_exceptions import NoSectionError, NoOptionError
 from AdvConfigMgr.utils import Error, get_between, get_after
-from AdvConfigMgr.config_transform import Xform
-from AdvConfigMgr.config_exceptions import NoSectionError, NoOptionError
+
 __all__ = ['Interpolation', 'NoInterpolation']
 
 
@@ -308,3 +308,5 @@ class Interpolation(BaseInterpolation):
                     "'{0}' must be followed by '{0}' or '{2}', found: {1}".format(self.key, rest, self.key_start))
 
         return ''.join(accum)
+
+interpolator = Interpolation()

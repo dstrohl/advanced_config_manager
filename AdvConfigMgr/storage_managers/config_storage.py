@@ -1,15 +1,16 @@
 __author__ = 'dstrohl'
 
-from AdvConfigMgr.config_exceptions import *
-from AdvConfigMgr.utils import make_list, merge_dictionaries
-from AdvConfigMgr.utils.filehandler import PathHandler
-from argparse import ArgumentParser
 import copy
 import re
-import sys
 import shutil
-from pathlib import Path
+import sys
+from argparse import ArgumentParser
 from datetime import datetime
+from pathlib import Path
+
+from AdvConfigMgr.exceptions.config_exceptions import *
+from AdvConfigMgr.utils import make_list, merge_dictionaries
+from AdvConfigMgr.utils.filehandler import PathHandler
 
 __all__ = ['BaseConfigStorageManager', 'StorageManagerManager', 'ConfigCLIStorage', 'ConfigSimpleDictStorage',
            'ConfigFileStorage', 'ConfigStringStorage', 'BaseConfigRecordBasedStorageManager']

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from AdvConfigMgr.advconfigmgr import ConfigManager
-from AdvConfigMgr.config_exceptions import ip
+from AdvConfigMgr.exceptions.config_exceptions import ip
 from AdvConfigMgr.storage_managers.config_storage import *
 
 

@@ -1,6 +1,8 @@
-from .config_storage import BaseConfigRecordBasedStorageManager, BaseConfigStorageManager
-from ..config_exceptions import Error
 import pymongo
+
+from AdvConfigMgr.exceptions.config_exceptions import Error
+from .config_storage import BaseConfigStorageManager
+
 
 class ACMMongoStorageManagerConnectionError(Error):
     pass

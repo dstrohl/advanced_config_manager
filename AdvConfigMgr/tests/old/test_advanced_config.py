@@ -4,8 +4,8 @@ import copy
 import unittest
 
 from AdvConfigMgr.advconfigmgr import ConfigManager
-from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
 from AdvConfigMgr.config_validation import ValidationError
+from AdvConfigMgr.exceptions.config_exceptions import NoOptionError, NoSectionError, ForbiddenActionError, ip
 
 
 class TestClass(object):

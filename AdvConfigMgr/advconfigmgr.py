@@ -124,12 +124,12 @@ import copy
 from collections import OrderedDict
 from distutils.version import LooseVersion, Version
 
-from AdvConfigMgr.config_exceptions import *
-from AdvConfigMgr.config_interpolation import Interpolation
 from AdvConfigMgr.config_migrate import ConfigMigrationManager
-from AdvConfigMgr.config_ro_dict import ConfigDict
-from AdvConfigMgr.config_transform import Xform
 from AdvConfigMgr.config_types import *
+# from AdvConfigMgr.data_dict.config_interpolation import Interpolation
+from AdvConfigMgr.data_dict.config_transform import Xform
+from AdvConfigMgr.data_dict.old.config_ro_dict import ConfigDict
+from AdvConfigMgr.exceptions.config_exceptions import *
 from AdvConfigMgr.storage_managers.config_storage import *
 from AdvConfigMgr.utils import args_handler, make_list
 from AdvConfigMgr.utils.unset import _UNSET
@@ -1180,7 +1180,8 @@ class ConfigManager(object):
     _name = 'System Configuration'
 
     # Helper Classes Used
-    _DEFAULT_INTERPOLATION = Interpolation
+    # _DEFAULT_INTERPOLATION = Interpolation
+    _DEFAULT_INTERPOLATION = None
     _DEFAULT_STORAGE_PLUGINS = (ConfigFileStorage, )
     _DEFAULT_STORAGE_MANAGER = StorageManagerManager
     _DEFAULT_CLI_MANAGER = ConfigCLIStorage

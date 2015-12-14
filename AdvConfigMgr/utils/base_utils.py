@@ -7,7 +7,7 @@ __all__ = ['args_handler', 'GenericMeta', 'DictKey2Method', 'AdvDict', 'DBList',
            'TreeDict', 'TreeItem', 'make_list', 'flatten', 'unpack_class_method', 'get_between', 'get_after',
            'get_before', 'get_not_in', 'get_same', 'get_meta_attrs', 'remove_dupes', 'list_in_list', 'list_not_in_list',
            'count_unique', 'index_of_count', 'ListPlus', 'LookupManager', 'is_iterable', 'is_string', 'Error', 'Path',
-           'OrderedSet', 'swap', 'replace_between', 'format_as_decimal_string', 'MultiLevelDictManager',
+           'OrderedSet', 'swap', 'replace_between', 'format_as_decimal_string', 'MultiLevelDictManager', 'pluralize',
            'elipse_trim', 'concat', 'generate_percentages', 'convert_to_boolean', 'slugify', 'merge_dictionaries']
 
 import copy
@@ -372,7 +372,7 @@ class MultiLevelDictManager(object):
         """
         :param dict_db: the dictionary to use for lookups.  The keys for this must be strings.
         :param current_path: the current path string (see :py:class:`Path` for more info on path strings)
-        :param key_sep: the string to use to seperate the keys in the path, by default '.'
+        :param key_sep: the string to use to separate the keys in the path, by default '.'
         """
         self.dict_db = dict_db
         if isinstance(current_path, str):
@@ -1753,6 +1753,15 @@ def get_between(instring, start_key, end_key):
     """
     return get_after(get_before(instring, end_key), start_key)
 
+
+def pluralize(num, instring, plural_form=None):
+    if num == 1:
+        return instring
+    else:
+        if plural_form is None:
+            return instring+'s'
+        else:
+            return plural_form
 
 # ===============================================================================
 # Format number as clean string

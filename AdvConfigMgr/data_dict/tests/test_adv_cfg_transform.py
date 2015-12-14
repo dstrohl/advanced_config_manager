@@ -1,9 +1,11 @@
 __author__ = 'dstrohl'
 
 import unittest
-from AdvConfigMgr.utils.unset import _UNSET
-from AdvConfigMgr.config_transform import Xform
 
+from AdvConfigMgr.data_dict.config_transform import *
+from AdvConfigMgr.utils.unset import _UNSET
+
+'''
 class TestXform(unittest.TestCase):
     def test_xform(self):
         xf = Xform()
@@ -60,5 +62,46 @@ class TestXform(unittest.TestCase):
         self.assertFalse(tmp_check)
         self.assertEqual(tmp_ret, 'SEC5.opt5')
 
+'''
 
+class TestInterpolate(unittest.TestCase):
+
+    section = dict(
+        test1='this is',
+        test2='a test',
+        test3='%{test2}',
+        test4='%{test1} %{test2}',
+        test5='%{test4}, %{test1} another test',
+        test6='%{no end bracket',
+        test7='%{test6}',
+        test8='%{test8}'
+    )
+
+    def test_no_interpolation(self):
+        self.assertEqual('hello world', interpolate('hello world', section=self.section))
+
+    def test_one_interp(self):
+        self.assertEqual('this is foobar', interpolate('%{test1} foobar', section=self.section))
+
+    def test_two_interp(self):
+        self.assertEqual('a test is foobar', interpolate('%{test3} is foobar', section=self.section))
+
+    def test_two_deep_interp(self):
+        self.assertEqual('this is a test that is foobar', interpolate('%{test4} that is foobar', section=self.section))
+
+    def test_three_deep_interp(self):
+        self.assertEqual('this is a test, this is another test that is foobar', interpolate('%{test5} that is foobar', section=self.section))
+
+    def test_raises(self):
+        with self.assertRaises(InterpolationDepthError):
+            junk = interpolate('%{test8}', section=self.section)
+
+        with self.assertRaises(InterpolationSyntaxError):
+            junk = interpolate('%{test6}', section=self.section)
+
+        with self.assertRaises(InterpolationSyntaxError):
+            junk = interpolate('%{test7}', section=self.section)
+
+        with self.assertRaises(KeyError):
+            junk = interpolate('%{no test}', section=self.section)
 

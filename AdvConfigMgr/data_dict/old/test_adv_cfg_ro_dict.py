@@ -1,11 +1,6 @@
 __author__ = 'dstrohl'
 
-
-import unittest
-from AdvConfigMgr.config_ro_dict import ConfigDict
-from AdvConfigMgr.config_interpolation import Interpolation
-from AdvConfigMgr.config_exceptions import NoSectionError, LockedSectionError
-from AdvConfigMgr.config_transform import Xform
+from AdvConfigMgr.data_dict.config_transform import Xform
 
 xf = Xform()
 

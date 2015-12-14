@@ -2,10 +2,9 @@ __author__ = 'dstrohl'
 
 __all__ = ['ConfigDict']
 
-
-from AdvConfigMgr.config_exceptions import NoOptionError, NoSectionError, LockedSectionError
+from AdvConfigMgr.data_dict.config_transform import Xform
+from AdvConfigMgr.exceptions.config_exceptions import NoOptionError, NoSectionError
 from AdvConfigMgr.utils.unset import _UNSET
-from AdvConfigMgr.config_transform import Xform
 
 
 class ConfigOptionRec(object):

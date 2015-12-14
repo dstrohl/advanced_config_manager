@@ -4,11 +4,11 @@ import unittest
 from pathlib import Path
 
 from AdvConfigMgr.advconfigmgr import ConfigManager
-from AdvConfigMgr.config_exceptions import ip
+from AdvConfigMgr.exceptions.config_exceptions import ip
 from AdvConfigMgr.storage_managers.config_storage import *
 from AdvConfigMgr.storage_managers.storage_mongodb import *
-
 from AdvConfigMgr.storage_managers.tests.credentials import *
+
 
 class TestClass(object):
     t = 'teststring'
